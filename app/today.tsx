@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toLocalISODate } from '../src/domain/time';
@@ -14,19 +15,21 @@ export default function TodayScreen() {
   const [error, setError] = useState<string | null>(null);
   const [skipTargetSlotId, setSkipTargetSlotId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    getTodayItems(date)
-      .then((result) => {
-        if (!cancelled) setItems(result);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [date]);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      getTodayItems(date)
+        .then((result) => {
+          if (!cancelled) setItems(result);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [date]),
+  );
 
   const applyEvent = useCallback((slotId: string, ev: TodayItem['event']) => {
     setItems((prev) =>

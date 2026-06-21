@@ -1,87 +1,24 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { getDb } from '../db';
+import {
+  type ComponentRow,
+  type DayOverrideRow,
+  type EventRow,
+  type RecipeItemRow,
+  type SlotRow,
+  getActivePlanVersion,
+  mapComponent,
+  mapEvent,
+  mapSlot,
+  placeholders,
+} from '../db/queries';
 import { OverrideRecipeSnapshotSchema } from '../domain/schemas';
-import type { Event, Slot, TodayItem } from '../domain/types';
+import type { TodayItem, TodayRecipeItem } from '../domain/types';
 
-type PlanVersionRow = {
-  id: string;
-  name: string;
-  valid_from: string;
-  created_at: string;
-};
-
-type SlotRow = {
-  id: string;
-  plan_version_id: string;
-  type: 'meal' | 'med';
-  title: string;
-  info: string | null;
-  time_minutes: number;
-  sort_order: number;
-  created_at: string;
-};
-
-type DayOverrideRow = {
-  id: string;
-  date: string;
-  slot_id: string;
-  override_json: string;
-  created_at: string;
-};
-
-type EventRow = {
-  id: string;
-  date: string;
-  slot_id: string;
-  status: 'done' | 'skipped';
-  created_at: string;
-  note: string | null;
-};
-
-type RecipeItemRow = {
-  id: string;
-  slot_id: string;
-  component_id: string;
-  ml: number;
-  sort_order: number;
-};
-
-type ComponentRow = {
-  id: string;
-  name: string;
-  category: string | null;
-  is_favorite: number;
-  last_used_at: string | null;
-};
-
-function mapSlot(r: SlotRow): Slot {
-  return {
-    id: r.id,
-    planVersionId: r.plan_version_id,
-    type: r.type,
-    title: r.title,
-    info: r.info,
-    timeMinutes: r.time_minutes,
-    sortOrder: r.sort_order,
-  };
-}
-
-function mapEvent(r: EventRow): Event {
-  return {
-    id: r.id,
-    date: r.date,
-    slotId: r.slot_id,
-    status: r.status,
-    createdAt: r.created_at,
-    note: r.note,
-  };
-}
-
-function placeholders(n: number): string {
-  return Array.from({ length: n }, () => '?').join(',');
-}
-
-async function loadPlanRecipeItems(db: SQLiteDatabase, slotIds: string[]): Promise<Map<string, RecipeItemRow[]>> {
+async function loadPlanRecipeItems(
+  db: SQLiteDatabase,
+  slotIds: string[],
+): Promise<Map<string, RecipeItemRow[]>> {
   const map = new Map<string, RecipeItemRow[]>();
   if (slotIds.length === 0) return map;
   const rows = await db.getAllAsync<RecipeItemRow>(
@@ -128,10 +65,7 @@ function parseOverride(json: string, slotId: string): SnapshotRecipeItem[] | nul
 export async function getTodayItems(date: string): Promise<TodayItem[]> {
   const db = await getDb();
 
-  const planVersion = await db.getFirstAsync<PlanVersionRow>(
-    'SELECT * FROM plan_versions WHERE valid_from <= ? ORDER BY valid_from DESC LIMIT 1',
-    [date],
-  );
+  const planVersion = await getActivePlanVersion(db, date);
   if (!planVersion) return [];
 
   const slotRows = await db.getAllAsync<SlotRow>(
@@ -182,16 +116,22 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
         sortOrder: r.sort_order,
       }));
 
-    item.effectiveRecipe = recipeItems
+    const sorted: TodayRecipeItem[] = recipeItems
       .slice()
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((r) => ({
-        componentId: r.componentId,
-        name: componentsById.get(r.componentId)?.name ?? '(unbekannt)',
-        ml: r.ml,
-        sortOrder: r.sortOrder,
-      }));
-    item.totalMl = item.effectiveRecipe.reduce((sum, r) => sum + r.ml, 0);
+      .map((r) => {
+        const comp = componentsById.get(r.componentId);
+        return {
+          componentId: r.componentId,
+          name: comp ? mapComponent(comp).name : '(unbekannt)',
+          deliveryForm: comp ? mapComponent(comp).deliveryForm ?? null : null,
+          ml: r.ml,
+          sortOrder: r.sortOrder,
+        };
+      });
+
+    item.effectiveRecipe = sorted;
+    item.totalMl = sorted.reduce((sum, r) => sum + r.ml, 0);
 
     return item;
   });

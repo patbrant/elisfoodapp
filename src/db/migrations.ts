@@ -83,7 +83,12 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 `;
 
-const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001];
+const MIGRATION_002 = `
+ALTER TABLE components ADD COLUMN delivery_form TEXT
+  CHECK (delivery_form IS NULL OR delivery_form IN ('flasche', 'sonde'));
+`;
+
+const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

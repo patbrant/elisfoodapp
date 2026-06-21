@@ -1,7 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
+import type { TodayRecipeItem } from '../domain/types';
+import { DeliveryBadge } from './DeliveryBadge';
 
 type Props = {
-  items: Array<{ componentId: string; name: string; ml: number; sortOrder: number }>;
+  items: TodayRecipeItem[];
   totalMl: number;
 };
 
@@ -10,9 +12,12 @@ export function RecipeCard({ items, totalMl }: Props) {
     <View style={styles.container}>
       {items.map((r) => (
         <View key={r.componentId} style={styles.row}>
-          <Text style={styles.name} numberOfLines={1}>
-            {r.name}
-          </Text>
+          <View style={styles.nameWrap}>
+            <Text style={styles.name} numberOfLines={1}>
+              {r.name}
+            </Text>
+            <DeliveryBadge form={r.deliveryForm} />
+          </View>
           <Text style={styles.ml}>{r.ml} ml</Text>
         </View>
       ))}
@@ -31,13 +36,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 2,
   },
-  name: {
+  nameWrap: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginRight: 12,
+  },
+  name: {
     fontSize: 14,
     color: '#222',
-    marginRight: 12,
+    flexShrink: 1,
   },
   ml: {
     fontSize: 14,
