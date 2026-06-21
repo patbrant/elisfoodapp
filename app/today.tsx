@@ -1,17 +1,20 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getTodayItems } from '../src/services/todayService';
 import { toLocalISODate } from '../src/domain/time';
 import type { TodayItem } from '../src/domain/types';
+import { createEvent } from '../src/services/eventService';
+import { getTodayItems } from '../src/services/todayService';
+import { NoteModal } from '../src/ui/NoteModal';
 import { TimelineItemCard } from '../src/ui/TimelineItemCard';
 
 export default function TodayScreen() {
+  const date = useMemo(() => toLocalISODate(new Date()), []);
   const [items, setItems] = useState<TodayItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [skipTargetSlotId, setSkipTargetSlotId] = useState<string | null>(null);
 
   useEffect(() => {
-    const date = toLocalISODate(new Date());
     let cancelled = false;
     getTodayItems(date)
       .then((result) => {
@@ -23,7 +26,46 @@ export default function TodayScreen() {
     return () => {
       cancelled = true;
     };
+  }, [date]);
+
+  const applyEvent = useCallback((slotId: string, ev: TodayItem['event']) => {
+    setItems((prev) =>
+      prev ? prev.map((it) => (it.slot.id === slotId ? { ...it, event: ev } : it)) : prev,
+    );
   }, []);
+
+  const handleDone = useCallback(
+    async (slotId: string) => {
+      try {
+        const ev = await createEvent(date, slotId, 'done');
+        applyEvent(slotId, ev);
+      } catch (err) {
+        Alert.alert('Konnte nicht speichern', err instanceof Error ? err.message : String(err));
+      }
+    },
+    [date, applyEvent],
+  );
+
+  const handleSkip = useCallback((slotId: string) => {
+    setSkipTargetSlotId(slotId);
+  }, []);
+
+  const handleSkipSubmit = useCallback(
+    async (note: string | null) => {
+      const slotId = skipTargetSlotId;
+      setSkipTargetSlotId(null);
+      if (!slotId) return;
+      try {
+        const ev = await createEvent(date, slotId, 'skipped', note);
+        applyEvent(slotId, ev);
+      } catch (err) {
+        Alert.alert('Konnte nicht speichern', err instanceof Error ? err.message : String(err));
+      }
+    },
+    [date, skipTargetSlotId, applyEvent],
+  );
+
+  const handleSkipCancel = useCallback(() => setSkipTargetSlotId(null), []);
 
   if (error) {
     return (
@@ -55,10 +97,22 @@ export default function TodayScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.header}>Heute</Text>
         {items.map((item) => (
-          <TimelineItemCard key={item.slot.id} item={item} />
+          <TimelineItemCard
+            key={item.slot.id}
+            item={item}
+            onDone={handleDone}
+            onSkip={handleSkip}
+          />
         ))}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+      <NoteModal
+        visible={skipTargetSlotId !== null}
+        title="Übersprungen — Notiz (optional)"
+        placeholder="z.B. Grund oder Kontext"
+        onSubmit={handleSkipSubmit}
+        onCancel={handleSkipCancel}
+      />
     </SafeAreaView>
   );
 }

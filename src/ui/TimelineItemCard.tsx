@@ -1,11 +1,15 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { minutesToHHMM } from '../domain/time';
 import type { TodayItem } from '../domain/types';
 import { RecipeCard } from './RecipeCard';
 
-type Props = { item: TodayItem };
+type Props = {
+  item: TodayItem;
+  onDone: (slotId: string) => void;
+  onSkip: (slotId: string) => void;
+};
 
-export function TimelineItemCard({ item }: Props) {
+export function TimelineItemCard({ item, onDone, onSkip }: Props) {
   const { slot, effectiveRecipe, totalMl, event } = item;
   const hasEvent = !!event;
 
@@ -22,6 +26,22 @@ export function TimelineItemCard({ item }: Props) {
       {slot.info ? <Text style={styles.info}>{slot.info}</Text> : null}
       {slot.type === 'meal' && effectiveRecipe && effectiveRecipe.length > 0 ? (
         <RecipeCard items={effectiveRecipe} totalMl={totalMl ?? 0} />
+      ) : null}
+      {!hasEvent ? (
+        <View style={styles.actions}>
+          <Pressable
+            style={({ pressed }) => [styles.actionButton, styles.skipButton, pressed && styles.pressed]}
+            onPress={() => onSkip(slot.id)}
+          >
+            <Text style={styles.skipText}>Übersprungen</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.actionButton, styles.doneButton, pressed && styles.pressed]}
+            onPress={() => onDone(slot.id)}
+          >
+            <Text style={styles.doneText}>Erledigt</Text>
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
@@ -85,5 +105,35 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     color: '#222',
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    gap: 8,
+  },
+  actionButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  skipButton: {
+    backgroundColor: '#f4ece6',
+  },
+  skipText: {
+    color: '#5a3a1f',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  doneButton: {
+    backgroundColor: '#1f6feb',
+  },
+  doneText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
