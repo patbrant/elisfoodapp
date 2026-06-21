@@ -13,7 +13,7 @@ export default function TodayScreen() {
   const date = useMemo(() => toLocalISODate(new Date()), []);
   const [items, setItems] = useState<TodayItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [skipTargetSlotId, setSkipTargetSlotId] = useState<string | null>(null);
+  const [doneTargetSlotId, setDoneTargetSlotId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,38 +37,26 @@ export default function TodayScreen() {
     );
   }, []);
 
-  const handleDone = useCallback(
-    async (slotId: string) => {
-      try {
-        const ev = await createEvent(date, slotId, 'done');
-        applyEvent(slotId, ev);
-      } catch (err) {
-        Alert.alert('Konnte nicht speichern', err instanceof Error ? err.message : String(err));
-      }
-    },
-    [date, applyEvent],
-  );
-
-  const handleSkip = useCallback((slotId: string) => {
-    setSkipTargetSlotId(slotId);
+  const handleDone = useCallback((slotId: string) => {
+    setDoneTargetSlotId(slotId);
   }, []);
 
-  const handleSkipSubmit = useCallback(
+  const handleDoneSubmit = useCallback(
     async (note: string | null) => {
-      const slotId = skipTargetSlotId;
-      setSkipTargetSlotId(null);
+      const slotId = doneTargetSlotId;
+      setDoneTargetSlotId(null);
       if (!slotId) return;
       try {
-        const ev = await createEvent(date, slotId, 'skipped', note);
+        const ev = await createEvent(date, slotId, 'done', note);
         applyEvent(slotId, ev);
       } catch (err) {
         Alert.alert('Konnte nicht speichern', err instanceof Error ? err.message : String(err));
       }
     },
-    [date, skipTargetSlotId, applyEvent],
+    [date, doneTargetSlotId, applyEvent],
   );
 
-  const handleSkipCancel = useCallback(() => setSkipTargetSlotId(null), []);
+  const handleDoneCancel = useCallback(() => setDoneTargetSlotId(null), []);
 
   if (error) {
     return (
@@ -104,17 +92,16 @@ export default function TodayScreen() {
             key={item.slot.id}
             item={item}
             onDone={handleDone}
-            onSkip={handleSkip}
           />
         ))}
         <View style={styles.bottomSpacer} />
       </ScrollView>
       <NoteModal
-        visible={skipTargetSlotId !== null}
-        title="Übersprungen — Notiz (optional)"
-        placeholder="z.B. Grund oder Kontext"
-        onSubmit={handleSkipSubmit}
-        onCancel={handleSkipCancel}
+        visible={doneTargetSlotId !== null}
+        title="Erledigt — Kommentar (optional)"
+        placeholder="z.B. Mengen-Abweichung, Beobachtung"
+        onSubmit={handleDoneSubmit}
+        onCancel={handleDoneCancel}
       />
     </SafeAreaView>
   );

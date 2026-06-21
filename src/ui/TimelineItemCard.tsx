@@ -6,10 +6,9 @@ import { RecipeCard } from './RecipeCard';
 type Props = {
   item: TodayItem;
   onDone: (slotId: string) => void;
-  onSkip: (slotId: string) => void;
 };
 
-export function TimelineItemCard({ item, onDone, onSkip }: Props) {
+export function TimelineItemCard({ item, onDone }: Props) {
   const { slot, effectiveRecipe, totalMl, event } = item;
   const hasEvent = !!event;
 
@@ -27,14 +26,9 @@ export function TimelineItemCard({ item, onDone, onSkip }: Props) {
       {slot.type === 'meal' && effectiveRecipe && effectiveRecipe.length > 0 ? (
         <RecipeCard items={effectiveRecipe} totalMl={totalMl ?? 0} />
       ) : null}
+      {event?.note ? <Text style={styles.note}>„{event.note}"</Text> : null}
       {!hasEvent ? (
         <View style={styles.actions}>
-          <Pressable
-            style={({ pressed }) => [styles.actionButton, styles.skipButton, pressed && styles.pressed]}
-            onPress={() => onSkip(slot.id)}
-          >
-            <Text style={styles.skipText}>Übersprungen</Text>
-          </Pressable>
           <Pressable
             style={({ pressed }) => [styles.actionButton, styles.doneButton, pressed && styles.pressed]}
             onPress={() => onDone(slot.id)}
@@ -110,30 +104,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginTop: 12,
-    gap: 8,
   },
   actionButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 8,
   },
   pressed: {
     opacity: 0.7,
-  },
-  skipButton: {
-    backgroundColor: '#f4ece6',
-  },
-  skipText: {
-    color: '#5a3a1f',
-    fontSize: 14,
-    fontWeight: '500',
   },
   doneButton: {
     backgroundColor: '#1f6feb',
   },
   doneText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+  },
+  note: {
+    marginTop: 6,
+    marginLeft: 64,
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: '#555',
   },
 });
