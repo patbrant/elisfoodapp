@@ -8,6 +8,10 @@ Bootstrap (Slice 0) is complete: Expo SDK 54 project lives **in-place at the rep
 
 **Spec extension — Migration 002**: `components.delivery_form` column added (`'flasche' | 'sonde' | null`) to surface delivery method per component in the UI. Motivated by the feeding-model memory (`[[project-feeding-model]]`) — a single meal aggregates components delivered via different routes (Flasche vs Sonde). SPEC §3 doesn't mention this column; if you regenerate the schema from SPEC verbatim, you'll drop it. Keep both the column and Migration 002 intact.
 
+**Spec extension — Migration 003 (`day_actuals` table)**: tracks per-day, per-slot, per-component "actually administered ml" for live amount tracking. Driven by user-memory `[[project-actuals-tracking]]`: each component's `meal_recipe_items.ml` is the **100%-Menge** (full-meal-equivalent for that component); components are fungible substitutes. On Today, each meal slot shows per-component target + actual-input + derived "noch nötig" suggestion. **This relaxes SPEC §0 and §13.4**: amount-recording during the meal is now expected (the no-recording rule applied to finalization time only); explicit percentages and "Ziel X ml" labels are allowed (still no progress bars, compliance indicators, or warnings).
+
+**Slice numbering shift**: original 7-slice workflow grew to 8 slices when Live Actuals was inserted as Slice 4 (per user request after Slice 3 completion). Original Slice 4 (Override / Heute anpassen, SPEC §9) is now Slice 5; subsequent slices shift +1 (Notifications = 6, History/Settings = 7+).
+
 **Read `SPEC.md` first.** It is the source of truth for product rules, schema, routes, services, and acceptance tests. Sections referenced below map directly to numbered headings in that file.
 
 **Expo SDK 54 docs**: https://docs.expo.dev/versions/v54.0.0/ — consult before using any Expo API, since SDK semantics shift across versions. The template scaffolded SDK 56, but `npx expo install` realigned everything to SDK 54 to match the user's Expo Go build. Don't `expo install` a package without checking it stays on SDK 54.

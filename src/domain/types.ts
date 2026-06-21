@@ -47,6 +47,7 @@ export type TodayRecipeItem = {
   name: string;
   deliveryForm: DeliveryForm | null;
   ml: number;
+  actualMl: number | null;
   sortOrder: number;
 };
 
@@ -55,4 +56,13 @@ export type TodayItem = {
   effectiveRecipe?: TodayRecipeItem[];
   totalMl?: number;
   event?: Event;
+};
+
+export type DayActual = {
+  id: string;
+  date: string;
+  slotId: string;
+  componentId: string;
+  ml: number;
+  updatedAt: string;
 };

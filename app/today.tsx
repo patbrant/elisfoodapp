@@ -1,19 +1,24 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toLocalISODate } from '../src/domain/time';
 import type { TodayItem } from '../src/domain/types';
+import { removeActual, setActualMl } from '../src/services/actualsService';
 import { createEvent } from '../src/services/eventService';
 import { getTodayItems } from '../src/services/todayService';
 import { NoteModal } from '../src/ui/NoteModal';
 import { TimelineItemCard } from '../src/ui/TimelineItemCard';
+
+const ACTUAL_DEBOUNCE_MS = 400;
 
 export default function TodayScreen() {
   const date = useMemo(() => toLocalISODate(new Date()), []);
   const [items, setItems] = useState<TodayItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTargetSlotId, setDoneTargetSlotId] = useState<string | null>(null);
+  const [draftActuals, setDraftActuals] = useState<Record<string, Record<string, string>>>({});
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useFocusEffect(
     useCallback(() => {
@@ -31,13 +36,88 @@ export default function TodayScreen() {
     }, [date]),
   );
 
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      for (const t of timers.values()) clearTimeout(t);
+      timers.clear();
+    };
+  }, []);
+
   const applyEvent = useCallback((slotId: string, ev: TodayItem['event']) => {
     setItems((prev) =>
       prev ? prev.map((it) => (it.slot.id === slotId ? { ...it, event: ev } : it)) : prev,
     );
   }, []);
 
+  const applyActual = useCallback((slotId: string, componentId: string, ml: number | null) => {
+    setItems((prev) =>
+      prev
+        ? prev.map((it) => {
+            if (it.slot.id !== slotId || !it.effectiveRecipe) return it;
+            return {
+              ...it,
+              effectiveRecipe: it.effectiveRecipe.map((r) =>
+                r.componentId === componentId ? { ...r, actualMl: ml } : r,
+              ),
+            };
+          })
+        : prev,
+    );
+  }, []);
+
+  const handleActualChange = useCallback(
+    (slotId: string, componentId: string, text: string) => {
+      const draftKey = `${slotId}:${componentId}`;
+      setDraftActuals((prev) => ({
+        ...prev,
+        [slotId]: { ...(prev[slotId] ?? {}), [componentId]: text },
+      }));
+
+      const existing = timersRef.current.get(draftKey);
+      if (existing) clearTimeout(existing);
+
+      const timer = setTimeout(async () => {
+        timersRef.current.delete(draftKey);
+        const trimmed = text.trim();
+        const parsed = trimmed === '' ? null : parseInt(trimmed, 10);
+        if (parsed !== null && Number.isNaN(parsed)) {
+          setDraftActuals((prev) => {
+            const slotDraft = { ...(prev[slotId] ?? {}) };
+            delete slotDraft[componentId];
+            return { ...prev, [slotId]: slotDraft };
+          });
+          return;
+        }
+        try {
+          if (parsed === null) {
+            await removeActual(date, slotId, componentId);
+            applyActual(slotId, componentId, null);
+          } else {
+            await setActualMl(date, slotId, componentId, parsed);
+            applyActual(slotId, componentId, Math.max(0, parsed));
+          }
+          setDraftActuals((prev) => {
+            const slotDraft = { ...(prev[slotId] ?? {}) };
+            delete slotDraft[componentId];
+            return { ...prev, [slotId]: slotDraft };
+          });
+        } catch (err) {
+          Alert.alert('Konnte Menge nicht speichern', err instanceof Error ? err.message : String(err));
+        }
+      }, ACTUAL_DEBOUNCE_MS);
+      timersRef.current.set(draftKey, timer);
+    },
+    [date, applyActual],
+  );
+
   const handleDone = useCallback((slotId: string) => {
+    for (const [key, t] of timersRef.current.entries()) {
+      if (key.startsWith(`${slotId}:`)) {
+        clearTimeout(t);
+        timersRef.current.delete(key);
+      }
+    }
     setDoneTargetSlotId(slotId);
   }, []);
 
@@ -85,13 +165,15 @@ export default function TodayScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.header}>Heute</Text>
         {items.map((item) => (
           <TimelineItemCard
             key={item.slot.id}
             item={item}
+            draftActuals={draftActuals[item.slot.id] ?? {}}
             onDone={handleDone}
+            onActualChange={handleActualChange}
           />
         ))}
         <View style={styles.bottomSpacer} />

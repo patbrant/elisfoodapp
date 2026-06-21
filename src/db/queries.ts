@@ -1,5 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { Component, DeliveryForm, Event, RecipeItem, Slot, SlotType } from '../domain/types';
+import type { Component, DayActual, DeliveryForm, Event, RecipeItem, Slot, SlotType } from '../domain/types';
 
 export type PlanVersionRow = {
   id: string;
@@ -53,6 +53,15 @@ export type ComponentRow = {
   last_used_at: string | null;
 };
 
+export type DayActualRow = {
+  id: string;
+  date: string;
+  slot_id: string;
+  component_id: string;
+  ml: number;
+  updated_at: string;
+};
+
 export function mapSlot(r: SlotRow): Slot {
   return {
     id: r.id,
@@ -84,6 +93,17 @@ export function mapComponent(r: ComponentRow): Component {
     deliveryForm: r.delivery_form,
     isFavorite: r.is_favorite === 1,
     lastUsedAt: r.last_used_at,
+  };
+}
+
+export function mapDayActual(r: DayActualRow): DayActual {
+  return {
+    id: r.id,
+    date: r.date,
+    slotId: r.slot_id,
+    componentId: r.component_id,
+    ml: r.ml,
+    updatedAt: r.updated_at,
   };
 }
 

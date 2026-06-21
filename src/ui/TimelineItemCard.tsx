@@ -1,16 +1,23 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { formatPercentage, totalPercentage } from '../domain/actualsMath';
 import { minutesToHHMM } from '../domain/time';
 import type { TodayItem } from '../domain/types';
 import { RecipeCard } from './RecipeCard';
 
 type Props = {
   item: TodayItem;
+  draftActuals: Record<string, string>;
   onDone: (slotId: string) => void;
+  onActualChange: (slotId: string, componentId: string, text: string) => void;
 };
 
-export function TimelineItemCard({ item, onDone }: Props) {
+export function TimelineItemCard({ item, draftActuals, onDone, onActualChange }: Props) {
   const { slot, effectiveRecipe, totalMl, event } = item;
   const hasEvent = !!event;
+  const hasRecipe = slot.type === 'meal' && effectiveRecipe && effectiveRecipe.length > 0;
+  const mealPct = hasRecipe
+    ? totalPercentage(effectiveRecipe.map((r) => ({ ml: r.ml, actualMl: r.actualMl })))
+    : null;
 
   return (
     <View style={[styles.card, hasEvent && styles.cardWithEvent]}>
@@ -19,12 +26,21 @@ export function TimelineItemCard({ item, onDone }: Props) {
         <Text style={styles.title} numberOfLines={1}>
           {slot.title}
         </Text>
+        {mealPct !== null ? (
+          <Text style={styles.headerPct}>{formatPercentage(mealPct)}</Text>
+        ) : null}
         {event?.status === 'done' && <StatusBadge label="Erledigt" tone="done" />}
         {event?.status === 'skipped' && <StatusBadge label="Übersprungen" tone="skipped" />}
       </View>
       {slot.info ? <Text style={styles.info}>{slot.info}</Text> : null}
-      {slot.type === 'meal' && effectiveRecipe && effectiveRecipe.length > 0 ? (
-        <RecipeCard items={effectiveRecipe} totalMl={totalMl ?? 0} />
+      {hasRecipe ? (
+        <RecipeCard
+          items={effectiveRecipe}
+          totalMl={totalMl ?? 0}
+          editable={!hasEvent}
+          draftActuals={draftActuals}
+          onActualChange={(componentId, text) => onActualChange(slot.id, componentId, text)}
+        />
       ) : null}
       {event?.note ? <Text style={styles.note}>„{event.note}"</Text> : null}
       {!hasEvent ? (
@@ -77,6 +93,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#222',
     marginLeft: 6,
+  },
+  headerPct: {
+    fontSize: 13,
+    color: '#1f6feb',
+    fontWeight: '600',
+    marginLeft: 6,
+    fontVariant: ['tabular-nums'],
   },
   info: {
     marginTop: 4,

@@ -267,6 +267,9 @@ export default function SlotEditorScreen() {
 
         {isMeal ? (
           <Section label="Rezept">
+            <Text style={styles.recipeHint}>
+              Pro Komponente: Menge, die 100 % der Mahlzeit entspricht.
+            </Text>
             {recipeItems.length === 0 ? (
               <Text style={styles.recipeEmpty}>Noch keine Komponenten.</Text>
             ) : (
@@ -379,6 +382,12 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
     paddingVertical: 4,
+  },
+  recipeHint: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
   recipeRow: {
     flexDirection: 'row',

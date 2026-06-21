@@ -88,7 +88,21 @@ ALTER TABLE components ADD COLUMN delivery_form TEXT
   CHECK (delivery_form IS NULL OR delivery_form IN ('flasche', 'sonde'));
 `;
 
-const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002];
+const MIGRATION_003 = `
+CREATE TABLE IF NOT EXISTS day_actuals (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  slot_id TEXT NOT NULL,
+  component_id TEXT NOT NULL,
+  ml INTEGER NOT NULL CHECK (ml >= 0),
+  updated_at TEXT NOT NULL,
+  UNIQUE(date, slot_id, component_id),
+  FOREIGN KEY(slot_id) REFERENCES slots(id) ON DELETE CASCADE,
+  FOREIGN KEY(component_id) REFERENCES components(id) ON DELETE CASCADE
+);
+`;
+
+const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002, MIGRATION_003];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { getDb } from '../db';
 import {
   type ComponentRow,
+  type DayActualRow,
   type DayOverrideRow,
   type EventRow,
   type RecipeItemRow,
@@ -74,12 +75,17 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
   );
   if (slotRows.length === 0) return [];
 
-  const [overrideRows, eventRows] = await Promise.all([
+  const [overrideRows, eventRows, actualRows] = await Promise.all([
     db.getAllAsync<DayOverrideRow>('SELECT * FROM day_overrides WHERE date = ?', [date]),
     db.getAllAsync<EventRow>('SELECT * FROM events WHERE date = ?', [date]),
+    db.getAllAsync<DayActualRow>('SELECT * FROM day_actuals WHERE date = ?', [date]),
   ]);
   const overridesBySlot = new Map(overrideRows.map((r) => [r.slot_id, r]));
   const eventsBySlot = new Map(eventRows.map((r) => [r.slot_id, r]));
+  const actualsBySlotComponent = new Map<string, number>();
+  for (const a of actualRows) {
+    actualsBySlotComponent.set(`${a.slot_id}:${a.component_id}`, a.ml);
+  }
 
   const mealSlotIds = slotRows.filter((s) => s.type === 'meal').map((s) => s.id);
   const planRecipeBySlot = await loadPlanRecipeItems(db, mealSlotIds);
@@ -121,11 +127,13 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((r) => {
         const comp = componentsById.get(r.componentId);
+        const actualMl = actualsBySlotComponent.get(`${slot.id}:${r.componentId}`);
         return {
           componentId: r.componentId,
           name: comp ? mapComponent(comp).name : '(unbekannt)',
           deliveryForm: comp ? mapComponent(comp).deliveryForm ?? null : null,
           ml: r.ml,
+          actualMl: actualMl ?? null,
           sortOrder: r.sortOrder,
         };
       });
