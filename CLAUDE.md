@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current Repo State
 
-Bootstrap (Slice 0) is complete: Expo SDK 56 project lives **in-place at the repo root**, all SPEC §1 deps installed (`expo-router`, `expo-notifications`, `expo-device`, `expo-constants`, `expo-sqlite`, `expo-crypto`, `zod`, `date-fns`, `date-fns-tz`), all 5 routes from SPEC §2 exist as placeholders, Migration 001 from SPEC §3 runs on first launch, first-launch seed from SPEC §12 creates `plan_version "Aktuell"` + 5 meal slots.
+Bootstrap (Slice 0) is complete: Expo SDK 54 project lives **in-place at the repo root**, all SPEC §1 deps installed (`expo-router`, `expo-notifications`, `expo-device`, `expo-constants`, `expo-sqlite`, `expo-crypto`, `zod`, `date-fns`, `date-fns-tz`), all 5 routes from SPEC §2 exist as placeholders, Migration 001 from SPEC §3 runs on first launch, first-launch seed from SPEC §12 creates `plan_version "Aktuell"` + 5 meal slots.
 
 **Read `SPEC.md` first.** It is the source of truth for product rules, schema, routes, services, and acceptance tests. Sections referenced below map directly to numbered headings in that file.
 
-**Expo SDK 56 docs**: https://docs.expo.dev/versions/v56.0.0/ — consult before using any Expo API, since SDK semantics shift across versions.
+**Expo SDK 54 docs**: https://docs.expo.dev/versions/v54.0.0/ — consult before using any Expo API, since SDK semantics shift across versions. The template scaffolded SDK 56, but `npx expo install` realigned everything to SDK 54 to match the user's Expo Go build. Don't `expo install` a package without checking it stays on SDK 54.
 
 ## Slicing & Workflow
 
