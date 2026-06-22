@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "ch.patbrant.elisfoodapp"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -26,6 +27,13 @@
     "plugins": [
       "expo-router",
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d5f190f2-5e65-4463-85fd-487675002270"
+      }
+    },
+    "owner": "patbrans-org"
   }
 }

@@ -8,5 +8,6 @@ export const OverrideRecipeSnapshotSchema = z.object({
     componentId: z.string(),
     ml: z.number().int().min(0),
     sortOrder: z.number().int().min(0),
+    deliveryForm: z.enum(['flasche', 'sondomat', 'spritze']).nullable().optional(),
   })).min(0),
 });

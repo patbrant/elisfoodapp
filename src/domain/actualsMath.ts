@@ -1,3 +1,5 @@
+export const TUBE_LOSS_ML = 20;
+
 export type TargetActualPair = {
   ml: number;
   actualMl: number | null;

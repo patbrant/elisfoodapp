@@ -42,13 +42,13 @@ export type RecipeItemRow = {
   component_id: string;
   ml: number;
   sort_order: number;
+  delivery_form: DeliveryForm | null;
 };
 
 export type ComponentRow = {
   id: string;
   name: string;
   category: string | null;
-  delivery_form: DeliveryForm | null;
   is_favorite: number;
   last_used_at: string | null;
 };
@@ -90,7 +90,6 @@ export function mapComponent(r: ComponentRow): Component {
     id: r.id,
     name: r.name,
     category: r.category,
-    deliveryForm: r.delivery_form,
     isFavorite: r.is_favorite === 1,
     lastUsedAt: r.last_used_at,
   };
@@ -114,6 +113,7 @@ export function mapRecipeItem(r: RecipeItemRow): RecipeItem {
     componentId: r.component_id,
     ml: r.ml,
     sortOrder: r.sort_order,
+    deliveryForm: r.delivery_form,
   };
 }
 

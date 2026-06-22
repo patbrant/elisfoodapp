@@ -3,6 +3,7 @@ import {
   componentPercentage,
   formatPercentage,
   suggestedRemainingMl,
+  TUBE_LOSS_ML,
   type TargetActualPair,
 } from '../domain/actualsMath';
 import type { TodayRecipeItem } from '../domain/types';
@@ -35,7 +36,7 @@ export function RecipeCard({ items, totalMl, editable, draftActuals, onActualCha
             : '';
 
         return (
-          <View key={r.componentId} style={styles.row}>
+          <View key={`${r.componentId}:${r.sortOrder}`} style={styles.row}>
             <View style={styles.line1}>
               <View style={styles.nameWrap}>
                 <Text style={styles.name} numberOfLines={1}>
@@ -48,6 +49,11 @@ export function RecipeCard({ items, totalMl, editable, draftActuals, onActualCha
                 {formatPercentage(pct)}
               </Text>
             </View>
+            {r.deliveryForm === 'sondomat' ? (
+              <Text style={styles.tubeHint}>
+                Pumpe {r.ml} + {TUBE_LOSS_ML} ml = {r.ml + TUBE_LOSS_ML} ml
+              </Text>
+            ) : null}
             <View style={styles.line2}>
               <Text style={styles.inputLabel}>Verabreicht</Text>
               <TextInput
@@ -154,6 +160,13 @@ const styles = StyleSheet.create({
     color: '#0a7d2c',
     fontStyle: 'italic',
     marginLeft: 6,
+  },
+  tubeHint: {
+    fontSize: 12,
+    color: '#7a5c00',
+    fontStyle: 'italic',
+    marginTop: 2,
+    marginBottom: 2,
   },
   total: {
     marginTop: 8,

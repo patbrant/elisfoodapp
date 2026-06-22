@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { hhmmToMinutes, minutesToHHMM } from '../../../src/domain/time';
-import type { Component, Slot } from '../../../src/domain/types';
+import type { Component, DeliveryForm, Slot } from '../../../src/domain/types';
 import {
   addRecipeItem,
   deleteSlot,
@@ -20,6 +20,7 @@ import {
   listRecipeItems,
   removeRecipeItem,
   type RecipeItemWithMeta,
+  updateRecipeItemDeliveryForm,
   updateRecipeItemMl,
   updateSlot,
 } from '../../../src/services/planService';
@@ -145,17 +146,41 @@ export default function SlotEditorScreen() {
   };
 
   const handlePickerSelect = useCallback(
-    async (component: Component) => {
+    async (component: Component, form: DeliveryForm | null) => {
       if (!slot) return;
       setPickerVisible(false);
       try {
-        await addRecipeItem(slot.id, component.id);
+        await addRecipeItem(slot.id, component.id, undefined, form);
         await reload();
       } catch (err) {
         Alert.alert('Konnte nicht hinzufügen', err instanceof Error ? err.message : String(err));
       }
     },
     [slot, reload],
+  );
+
+  const handleFormChange = useCallback(
+    (itemId: string) => {
+      const doUpdate = async (form: DeliveryForm | null) => {
+        try {
+          await updateRecipeItemDeliveryForm(itemId, form);
+          setRecipeItems((prev) =>
+            prev ? prev.map((it) => (it.id === itemId ? { ...it, deliveryForm: form } : it)) : prev,
+          );
+        } catch (err) {
+          Alert.alert('Konnte nicht speichern', err instanceof Error ? err.message : String(err));
+          await reload();
+        }
+      };
+      Alert.alert('Verabreichungsform', undefined, [
+        { text: 'Flasche', onPress: () => doUpdate('flasche') },
+        { text: 'Sondomat', onPress: () => doUpdate('sondomat') },
+        { text: 'Spritze', onPress: () => doUpdate('spritze') },
+        { text: 'Ohne Angabe', onPress: () => doUpdate(null) },
+        { text: 'Abbrechen', style: 'cancel' },
+      ]);
+    },
+    [reload],
   );
 
   const handleStepperChange = useCallback(
@@ -225,7 +250,6 @@ export default function SlotEditorScreen() {
   }
 
   const isMeal = slot.type === 'meal';
-  const excludeIds = recipeItems.map((r) => r.componentId);
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -279,7 +303,13 @@ export default function SlotEditorScreen() {
                     <Text style={styles.recipeName} numberOfLines={1}>
                       {item.name}
                     </Text>
-                    <DeliveryBadge form={item.deliveryForm} />
+                    <Pressable onPress={() => handleFormChange(item.id)} hitSlop={8}>
+                      {item.deliveryForm ? (
+                        <DeliveryBadge form={item.deliveryForm} />
+                      ) : (
+                        <Text style={styles.addFormText}>Form</Text>
+                      )}
+                    </Pressable>
                   </View>
                   <Stepper
                     value={item.ml}
@@ -313,7 +343,6 @@ export default function SlotEditorScreen() {
         visible={pickerVisible}
         onSelect={handlePickerSelect}
         onClose={() => setPickerVisible(false)}
-        excludeIds={excludeIds}
       />
     </SafeAreaView>
   );
@@ -415,6 +444,15 @@ const styles = StyleSheet.create({
   removeText: {
     fontSize: 18,
     color: '#999',
+  },
+  addFormText: {
+    fontSize: 12,
+    color: '#999',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
   addComponent: {
     marginTop: 4,

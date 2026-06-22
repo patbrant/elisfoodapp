@@ -19,29 +19,22 @@ import {
   touchLastUsed,
 } from '../services/componentService';
 import type { Component, DeliveryForm } from '../domain/types';
-import { DeliveryBadge } from './DeliveryBadge';
 
 type Props = {
   visible: boolean;
-  onSelect: (component: Component) => void;
+  onSelect: (component: Component, form: DeliveryForm | null) => void;
   onClose: () => void;
-  excludeIds?: string[];
 };
 
-export function ComponentPicker({ visible, onSelect, onClose, excludeIds }: Props) {
+export function ComponentPicker({ visible, onSelect, onClose }: Props) {
   const [query, setQuery] = useState('');
   const [favorites, setFavorites] = useState<Component[]>([]);
   const [recent, setRecent] = useState<Component[]>([]);
   const [results, setResults] = useState<Component[]>([]);
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<'search' | 'pickForm'>('search');
+  const [pendingComponent, setPendingComponent] = useState<Component | null>(null);
   const creatingRef = useRef(false);
-
-  const exclude = useCallback(
-    (list: Component[]) => (excludeIds && excludeIds.length > 0
-      ? list.filter((c) => !excludeIds.includes(c.id))
-      : list),
-    [excludeIds],
-  );
 
   const reloadDefaults = useCallback(async () => {
     const [favs, rec] = await Promise.all([listFavorites(), listRecent()]);
@@ -53,6 +46,8 @@ export function ComponentPicker({ visible, onSelect, onClose, excludeIds }: Prop
     if (!visible) return;
     setQuery('');
     setResults([]);
+    setStep('search');
+    setPendingComponent(null);
     creatingRef.current = false;
     reloadDefaults();
   }, [visible, reloadDefaults]);
@@ -72,29 +67,39 @@ export function ComponentPicker({ visible, onSelect, onClose, excludeIds }: Prop
     };
   }, [query, visible]);
 
+  const openFormPicker = (component: Component) => {
+    setPendingComponent(component);
+    setStep('pickForm');
+  };
+
   const handleSelect = async (component: Component) => {
     if (busy) return;
     setBusy(true);
     try {
       await touchLastUsed(component.id);
-      onSelect(component);
+      openFormPicker(component);
     } finally {
       setBusy(false);
     }
   };
 
-  const handleCreate = async (form: DeliveryForm | null) => {
+  const handleCreate = async () => {
     if (creatingRef.current) return;
     const name = query.trim();
     if (name.length === 0) return;
     creatingRef.current = true;
     try {
-      const component = await createComponent(name, form);
+      const component = await createComponent(name);
       await touchLastUsed(component.id);
-      onSelect({ ...component, lastUsedAt: new Date().toISOString() });
+      openFormPicker({ ...component, lastUsedAt: new Date().toISOString() });
     } finally {
       creatingRef.current = false;
     }
+  };
+
+  const handleFormPick = (form: DeliveryForm | null) => {
+    if (!pendingComponent) return;
+    onSelect(pendingComponent, form);
   };
 
   const handleToggleFavorite = async (id: string) => {
@@ -111,10 +116,6 @@ export function ComponentPicker({ visible, onSelect, onClose, excludeIds }: Prop
     && results.some((c) => c.name.toLowerCase() === trimmedQuery.toLowerCase());
   const showCreate = trimmedQuery.length > 0 && !hasExactMatch;
 
-  const filteredResults = exclude(results);
-  const filteredFavorites = exclude(favorites);
-  const filteredRecent = exclude(recent);
-
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -122,73 +123,98 @@ export function ComponentPicker({ visible, onSelect, onClose, excludeIds }: Prop
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Komponente wählen</Text>
-          <Pressable onPress={onClose} hitSlop={10}>
-            <Text style={styles.closeText}>Schliessen</Text>
+          <Text style={styles.headerTitle}>
+            {step === 'search' ? 'Komponente wählen' : 'Verabreichungsform'}
+          </Text>
+          <Pressable
+            onPress={step === 'pickForm' ? () => setStep('search') : onClose}
+            hitSlop={10}
+          >
+            <Text style={styles.closeText}>
+              {step === 'pickForm' ? 'Zurück' : 'Schliessen'}
+            </Text>
           </Pressable>
         </View>
-        <TextInput
-          style={styles.searchInput}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Suche oder neuen Namen eintippen"
-          placeholderTextColor="#888"
-          autoFocus
-          autoCorrect={false}
-          autoCapitalize="none"
-        />
-        <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-          {trimmedQuery.length === 0 ? (
-            <>
-              <Section title="Favoriten" empty="Keine Favoriten.">
-                {filteredFavorites.map((c) => (
-                  <ComponentRow
-                    key={c.id}
-                    component={c}
-                    onSelect={handleSelect}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                ))}
-              </Section>
-              <Section title="Zuletzt verwendet" empty="Noch nichts verwendet.">
-                {filteredRecent.map((c) => (
-                  <ComponentRow
-                    key={c.id}
-                    component={c}
-                    onSelect={handleSelect}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                ))}
-              </Section>
-            </>
-          ) : (
-            <Section title="Treffer" empty="Keine Treffer.">
-              {filteredResults.map((c) => (
-                <ComponentRow
-                  key={c.id}
-                  component={c}
-                  onSelect={handleSelect}
-                  onToggleFavorite={handleToggleFavorite}
-                />
-              ))}
-            </Section>
-          )}
 
-          {showCreate ? (
-            <View style={styles.createBox}>
-              <Text style={styles.createHint}>Neu anlegen als …</Text>
-              <Pressable style={styles.createButton} onPress={() => handleCreate('flasche')}>
-                <Text style={styles.createButtonText}>+ "{trimmedQuery}" (Flasche)</Text>
-              </Pressable>
-              <Pressable style={styles.createButton} onPress={() => handleCreate('sonde')}>
-                <Text style={styles.createButtonText}>+ "{trimmedQuery}" (Sonde)</Text>
-              </Pressable>
-              <Pressable style={styles.createButton} onPress={() => handleCreate(null)}>
-                <Text style={styles.createButtonText}>+ "{trimmedQuery}" (ohne Angabe)</Text>
-              </Pressable>
-            </View>
-          ) : null}
-        </ScrollView>
+        {step === 'search' ? (
+          <>
+            <TextInput
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Suche oder neuen Namen eintippen"
+              placeholderTextColor="#888"
+              autoFocus
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+              {trimmedQuery.length === 0 ? (
+                <>
+                  <Section title="Favoriten" empty="Keine Favoriten.">
+                    {favorites.map((c) => (
+                      <ComponentRow
+                        key={c.id}
+                        component={c}
+                        onSelect={handleSelect}
+                        onToggleFavorite={handleToggleFavorite}
+                      />
+                    ))}
+                  </Section>
+                  <Section title="Zuletzt verwendet" empty="Noch nichts verwendet.">
+                    {recent.map((c) => (
+                      <ComponentRow
+                        key={c.id}
+                        component={c}
+                        onSelect={handleSelect}
+                        onToggleFavorite={handleToggleFavorite}
+                      />
+                    ))}
+                  </Section>
+                </>
+              ) : (
+                <Section title="Treffer" empty="Keine Treffer.">
+                  {results.map((c) => (
+                    <ComponentRow
+                      key={c.id}
+                      component={c}
+                      onSelect={handleSelect}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
+                  ))}
+                </Section>
+              )}
+
+              {showCreate ? (
+                <View style={styles.createBox}>
+                  <Pressable style={styles.createButton} onPress={handleCreate}>
+                    <Text style={styles.createButtonText}>+ Anlegen "{trimmedQuery}"</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </ScrollView>
+          </>
+        ) : (
+          <View style={styles.formPickerBody}>
+            <Text style={styles.formPickerLabel}>{pendingComponent?.name}</Text>
+            <Text style={styles.formPickerHint}>Wie wird diese Komponente verabreicht?</Text>
+            <Pressable style={styles.formButton} onPress={() => handleFormPick('flasche')}>
+              <Text style={styles.formButtonText}>Flasche</Text>
+            </Pressable>
+            <Pressable style={styles.formButton} onPress={() => handleFormPick('sondomat')}>
+              <Text style={styles.formButtonText}>Sondomat</Text>
+            </Pressable>
+            <Pressable style={styles.formButton} onPress={() => handleFormPick('spritze')}>
+              <Text style={styles.formButtonText}>Spritze</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.formButton, styles.formButtonNeutral]}
+              onPress={() => handleFormPick(null)}
+            >
+              <Text style={[styles.formButtonText, styles.formButtonNeutralText]}>Ohne Angabe</Text>
+            </Pressable>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -231,7 +257,6 @@ function ComponentRow({
         <Text style={styles.rowName} numberOfLines={1}>
           {component.name}
         </Text>
-        <DeliveryBadge form={component.deliveryForm} />
       </Pressable>
       <Pressable
         onPress={() => onToggleFavorite(component.id)}
@@ -336,28 +361,53 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 24,
-    padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    backgroundColor: '#f8fafc',
-    gap: 8,
-  },
-  createHint: {
-    fontSize: 13,
-    color: '#475569',
-    marginBottom: 4,
   },
   createButton: {
     backgroundColor: '#1f6feb',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
   createButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+  },
+  formPickerBody: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    gap: 12,
+  },
+  formPickerLabel: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111',
+    marginBottom: 4,
+  },
+  formPickerHint: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  formButton: {
+    backgroundColor: '#1f6feb',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  formButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  formButtonNeutral: {
+    backgroundColor: 'transparent',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#bbb',
+  },
+  formButtonNeutralText: {
+    color: '#555',
   },
 });

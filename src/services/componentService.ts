@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { getDb } from '../db';
 import { type ComponentRow, mapComponent } from '../db/queries';
-import type { Component, DeliveryForm } from '../domain/types';
+import type { Component } from '../domain/types';
 
 export async function listFavorites(): Promise<Component[]> {
   const db = await getDb();
@@ -33,20 +33,18 @@ export async function search(query: string, limit = 50): Promise<Component[]> {
 
 export async function createComponent(
   name: string,
-  deliveryForm: DeliveryForm | null = null,
   category: string | null = null,
 ): Promise<Component> {
   const db = await getDb();
   const id = Crypto.randomUUID();
   await db.runAsync(
-    'INSERT INTO components (id, name, category, delivery_form, is_favorite, last_used_at) VALUES (?, ?, ?, ?, 0, NULL)',
-    [id, name, category, deliveryForm],
+    'INSERT INTO components (id, name, category, is_favorite, last_used_at) VALUES (?, ?, ?, 0, NULL)',
+    [id, name, category],
   );
   return {
     id,
     name,
     category,
-    deliveryForm,
     isFavorite: false,
     lastUsedAt: null,
   };

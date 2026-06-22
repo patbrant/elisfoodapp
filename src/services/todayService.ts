@@ -45,7 +45,12 @@ async function loadComponentsByIds(db: SQLiteDatabase, ids: string[]): Promise<M
   return map;
 }
 
-type SnapshotRecipeItem = { componentId: string; ml: number; sortOrder: number };
+type SnapshotRecipeItem = {
+  componentId: string;
+  ml: number;
+  sortOrder: number;
+  deliveryForm?: import('../domain/types').DeliveryForm | null;
+};
 
 function parseOverride(json: string, slotId: string): SnapshotRecipeItem[] | null {
   let raw: unknown;
@@ -120,6 +125,7 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
         componentId: r.component_id,
         ml: r.ml,
         sortOrder: r.sort_order,
+        deliveryForm: r.delivery_form,
       }));
 
     const sorted: TodayRecipeItem[] = recipeItems
@@ -131,7 +137,7 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
         return {
           componentId: r.componentId,
           name: comp ? mapComponent(comp).name : '(unbekannt)',
-          deliveryForm: comp ? mapComponent(comp).deliveryForm ?? null : null,
+          deliveryForm: r.deliveryForm ?? null,
           ml: r.ml,
           actualMl: actualMl ?? null,
           sortOrder: r.sortOrder,

@@ -1,6 +1,6 @@
 export type SlotType = 'meal' | 'med';
 export type EventStatus = 'done' | 'skipped';
-export type DeliveryForm = 'flasche' | 'sonde';
+export type DeliveryForm = 'flasche' | 'sondomat' | 'spritze';
 
 export type Slot = {
   id: string;
@@ -16,7 +16,6 @@ export type Component = {
   id: string;
   name: string;
   category?: string | null;
-  deliveryForm?: DeliveryForm | null;
   isFavorite: boolean;
   lastUsedAt?: string | null;
 };
@@ -27,10 +26,16 @@ export type RecipeItem = {
   componentId: string;
   ml: number;
   sortOrder: number;
+  deliveryForm: DeliveryForm | null;
 };
 
 export type OverrideRecipeSnapshot = {
-  recipeItems: Array<{ componentId: string; ml: number; sortOrder: number }>;
+  recipeItems: Array<{
+    componentId: string;
+    ml: number;
+    sortOrder: number;
+    deliveryForm?: DeliveryForm | null;
+  }>;
 };
 
 export type Event = {

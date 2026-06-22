@@ -5,13 +5,20 @@ type Props = { form: DeliveryForm | null | undefined };
 
 const LABELS: Record<DeliveryForm, string> = {
   flasche: 'Flasche',
-  sonde: 'Sonde',
+  sondomat: 'Sondomat',
+  spritze: 'Spritze',
+};
+
+const BADGE_COLORS: Record<DeliveryForm, string> = {
+  flasche: '#e7ddf7',
+  sondomat: '#d8ecdb',
+  spritze: '#fde8cc',
 };
 
 export function DeliveryBadge({ form }: Props) {
   if (!form) return null;
   return (
-    <View style={[styles.badge, form === 'flasche' ? styles.flasche : styles.sonde]}>
+    <View style={[styles.badge, { backgroundColor: BADGE_COLORS[form] }]}>
       <Text style={styles.text}>{LABELS[form]}</Text>
     </View>
   );
@@ -22,12 +29,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
-  },
-  flasche: {
-    backgroundColor: '#e7ddf7',
-  },
-  sonde: {
-    backgroundColor: '#d8ecdb',
   },
   text: {
     fontSize: 11,

@@ -102,7 +102,35 @@ CREATE TABLE IF NOT EXISTS day_actuals (
 );
 `;
 
-const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002, MIGRATION_003];
+const MIGRATION_004 = `
+ALTER TABLE meal_recipe_items ADD COLUMN delivery_form TEXT
+  CHECK (delivery_form IS NULL OR delivery_form IN ('flasche', 'sonde'));
+UPDATE meal_recipe_items SET delivery_form = (
+  SELECT delivery_form FROM components WHERE components.id = meal_recipe_items.component_id
+);
+ALTER TABLE components DROP COLUMN delivery_form;
+`;
+
+const MIGRATION_005 = `
+CREATE TABLE meal_recipe_items_new (
+  id TEXT PRIMARY KEY,
+  slot_id TEXT NOT NULL,
+  component_id TEXT NOT NULL,
+  ml INTEGER NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  delivery_form TEXT CHECK (delivery_form IS NULL OR delivery_form IN ('flasche', 'sondomat', 'spritze')),
+  FOREIGN KEY(slot_id) REFERENCES slots(id) ON DELETE CASCADE,
+  FOREIGN KEY(component_id) REFERENCES components(id) ON DELETE RESTRICT
+);
+INSERT INTO meal_recipe_items_new
+  SELECT id, slot_id, component_id, ml, sort_order,
+    CASE delivery_form WHEN 'sonde' THEN 'sondomat' ELSE delivery_form END
+  FROM meal_recipe_items;
+DROP TABLE meal_recipe_items;
+ALTER TABLE meal_recipe_items_new RENAME TO meal_recipe_items;
+`;
+
+const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002, MIGRATION_003, MIGRATION_004, MIGRATION_005];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

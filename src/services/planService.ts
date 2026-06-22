@@ -21,7 +21,6 @@ export type SlotPatch = Partial<{
 
 export type RecipeItemWithMeta = RecipeItem & {
   name: string;
-  deliveryForm: DeliveryForm | null;
 };
 
 export async function getActivePlanVersionId(): Promise<string | null> {
@@ -111,8 +110,8 @@ export async function deleteSlot(slotId: string): Promise<void> {
 
 export async function listRecipeItems(slotId: string): Promise<RecipeItemWithMeta[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<RecipeItemRow & { name: string; delivery_form: DeliveryForm | null }>(
-    `SELECT mri.*, c.name AS name, c.delivery_form AS delivery_form
+  const rows = await db.getAllAsync<RecipeItemRow & { name: string }>(
+    `SELECT mri.*, c.name AS name
        FROM meal_recipe_items mri
        JOIN components c ON c.id = mri.component_id
       WHERE mri.slot_id = ?
@@ -122,7 +121,6 @@ export async function listRecipeItems(slotId: string): Promise<RecipeItemWithMet
   return rows.map((r) => ({
     ...mapRecipeItem(r),
     name: r.name,
-    deliveryForm: r.delivery_form,
   }));
 }
 
@@ -130,6 +128,7 @@ export async function addRecipeItem(
   slotId: string,
   componentId: string,
   ml: number = DEFAULT_RECIPE_ML,
+  deliveryForm: DeliveryForm | null = null,
 ): Promise<RecipeItem> {
   const db = await getDb();
   const id = Crypto.randomUUID();
@@ -142,11 +141,19 @@ export async function addRecipeItem(
   const sortOrder = maxRow?.next ?? 0;
 
   await db.runAsync(
-    'INSERT INTO meal_recipe_items (id, slot_id, component_id, ml, sort_order) VALUES (?, ?, ?, ?, ?)',
-    [id, slotId, componentId, clamped, sortOrder],
+    'INSERT INTO meal_recipe_items (id, slot_id, component_id, ml, sort_order, delivery_form) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, slotId, componentId, clamped, sortOrder, deliveryForm],
   );
 
-  return { id, slotId, componentId, ml: clamped, sortOrder };
+  return { id, slotId, componentId, ml: clamped, sortOrder, deliveryForm };
+}
+
+export async function updateRecipeItemDeliveryForm(
+  itemId: string,
+  deliveryForm: DeliveryForm | null,
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE meal_recipe_items SET delivery_form = ? WHERE id = ?', [deliveryForm, itemId]);
 }
 
 export async function updateRecipeItemMl(itemId: string, ml: number): Promise<void> {
