@@ -43,7 +43,7 @@ export function RecipeCard({ items, totalMl, editable, draftActuals, onActualCha
                 </Text>
                 <DeliveryBadge form={r.deliveryForm} />
               </View>
-              <Text style={styles.target}>Ziel {r.ml} ml</Text>
+              <Text style={styles.target}>Maximalmenge {r.ml} ml</Text>
               <Text style={[styles.percent, pct === 0 && styles.percentZero]}>
                 {formatPercentage(pct)}
               </Text>
@@ -68,7 +68,6 @@ export function RecipeCard({ items, totalMl, editable, draftActuals, onActualCha
           </View>
         );
       })}
-      <Text style={styles.total}>Summe Ziele: {totalMl} ml</Text>
     </View>
   );
 }
