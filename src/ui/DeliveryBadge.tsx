@@ -1,18 +1,19 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { DeliveryForm } from '../domain/types';
+import { colors, radius } from './theme';
 
 type Props = { form: DeliveryForm | null | undefined };
 
 const LABELS: Record<DeliveryForm, string> = {
-  flasche: 'Flasche',
+  flasche:  'Flasche',
   sondomat: 'Sondomat',
-  spritze: 'Spritze',
+  spritze:  'Spritze',
 };
 
 const BADGE_COLORS: Record<DeliveryForm, string> = {
-  flasche: '#e7ddf7',
-  sondomat: '#d8ecdb',
-  spritze: '#fde8cc',
+  flasche:  colors.badgeFlasche,
+  sondomat: colors.badgeSondomat,
+  spritze:  colors.badgeSpritze,
 };
 
 export function DeliveryBadge({ form }: Props) {
@@ -28,11 +29,11 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   text: {
     fontSize: 11,
-    color: '#333',
+    color: colors.badgeText,
     fontWeight: '500',
   },
 });

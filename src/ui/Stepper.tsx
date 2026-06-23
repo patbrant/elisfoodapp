@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, radius } from './theme';
 
 type Props = {
   value: number;
@@ -83,25 +84,25 @@ const styles = StyleSheet.create({
     minWidth: 44,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: '#eef1f5',
-    borderRadius: 8,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonPressed: {
-    backgroundColor: '#dde2ea',
+    backgroundColor: colors.surfaceAlt,
   },
   buttonDisabled: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.borderLight,
   },
   buttonText: {
     fontSize: 14,
-    color: '#222',
-    fontWeight: '500',
+    color: colors.primary,
+    fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
   buttonTextDisabled: {
-    color: '#bbb',
+    color: colors.textMuted,
   },
   valueWrap: {
     minWidth: 64,
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 15,
-    color: '#111',
+    color: colors.text,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },

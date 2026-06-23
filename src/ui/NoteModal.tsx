@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { colors, radius } from './theme';
 
 type Props = {
   visible: boolean;
@@ -44,7 +45,7 @@ export function NoteModal({ visible, title, placeholder, onSubmit, onCancel }: P
             value={text}
             onChangeText={setText}
             placeholder={placeholder ?? 'Notiz (optional)'}
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={3}
             autoFocus
@@ -66,7 +67,7 @@ export function NoteModal({ visible, title, placeholder, onSubmit, onCancel }: P
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(44,33,24,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -77,25 +78,25 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 20,
   },
   title: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#111',
-    marginBottom: 10,
+    color: colors.text,
+    marginBottom: 12,
   },
   input: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#bbb',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
     padding: 10,
     minHeight: 80,
     textAlignVertical: 'top',
     fontSize: 15,
-    color: '#111',
+    color: colors.text,
   },
   actions: {
     flexDirection: 'row',
@@ -104,19 +105,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   button: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: radius.sm,
   },
   cancelButton: {
-    backgroundColor: '#eee',
+    backgroundColor: colors.borderLight,
   },
   cancelText: {
-    color: '#333',
+    color: colors.textSecondary,
     fontSize: 15,
+    fontWeight: '500',
   },
   submitButton: {
-    backgroundColor: '#1f6feb',
+    backgroundColor: colors.primary,
   },
   submitText: {
     color: '#fff',

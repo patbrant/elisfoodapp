@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toLocalISODate } from '../src/domain/time';
+import { colors } from '../src/ui/theme';
 import type { TodayItem } from '../src/domain/types';
 import { removeActual, setActualMl } from '../src/services/actualsService';
 import { createEvent } from '../src/services/eventService';
@@ -192,14 +193,14 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: colors.background,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: colors.background,
   },
   scroll: {
     padding: 16,
@@ -207,22 +208,22 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111',
+    color: colors.text,
     marginBottom: 16,
   },
   empty: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
   },
   errorTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#b00020',
+    color: colors.error,
     marginBottom: 6,
   },
   errorBody: {
     fontSize: 14,
-    color: '#b00020',
+    color: colors.error,
     textAlign: 'center',
   },
   bottomSpacer: {

@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { hhmmToMinutes, minutesToHHMM } from '../../../src/domain/time';
 import type { Component, DeliveryForm, Slot } from '../../../src/domain/types';
+import { colors, radius, shadow } from '../../../src/ui/theme';
 import {
   addRecipeItem,
   deleteSlot,
@@ -360,7 +361,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: colors.background,
   },
   scroll: {
     padding: 16,
@@ -371,61 +372,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: colors.background,
   },
   section: {
     marginBottom: 18,
   },
   label: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontWeight: '600',
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#bbb',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#111',
+    color: colors.text,
   },
   inputMultiline: {
     minHeight: 60,
     textAlignVertical: 'top',
   },
   inputInvalid: {
-    borderColor: '#b00020',
+    borderColor: colors.error,
   },
   errorHint: {
-    color: '#b00020',
+    color: colors.error,
     fontSize: 12,
     marginTop: 4,
   },
   recipeEmpty: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textMuted,
     fontStyle: 'italic',
     paddingVertical: 4,
   },
   recipeHint: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
     fontStyle: 'italic',
   },
   recipeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
     padding: 10,
     marginBottom: 8,
     gap: 8,
+    ...shadow.card,
   },
   recipeNameWrap: {
     flex: 1,
@@ -435,7 +437,7 @@ const styles = StyleSheet.create({
   },
   recipeName: {
     fontSize: 14,
-    color: '#111',
+    color: colors.text,
     flexShrink: 1,
   },
   removeButton: {
@@ -443,22 +445,22 @@ const styles = StyleSheet.create({
   },
   removeText: {
     fontSize: 18,
-    color: '#999',
+    color: colors.textMuted,
   },
   addFormText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
-    borderRadius: 6,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
   addComponent: {
     marginTop: 4,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#1f6feb',
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
     alignItems: 'center',
   },
   addComponentPressed: {
@@ -472,18 +474,18 @@ const styles = StyleSheet.create({
   deleteButton: {
     marginTop: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#b00020',
+    borderColor: colors.error,
   },
   deleteText: {
-    color: '#b00020',
+    color: colors.error,
     fontWeight: '600',
     fontSize: 15,
   },
   errorText: {
-    color: '#b00020',
+    color: colors.error,
     fontSize: 14,
   },
 });

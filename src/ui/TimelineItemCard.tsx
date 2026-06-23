@@ -3,6 +3,7 @@ import { formatPercentage, totalPercentage } from '../domain/actualsMath';
 import { minutesToHHMM } from '../domain/time';
 import type { TodayItem } from '../domain/types';
 import { RecipeCard } from './RecipeCard';
+import { colors, radius, shadow } from './theme';
 
 type Props = {
   item: TodayItem;
@@ -67,15 +68,14 @@ function StatusBadge({ label, tone }: { label: string; tone: 'done' | 'skipped' 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 14,
     marginBottom: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ddd',
+    ...shadow.card,
   },
   cardWithEvent: {
-    opacity: 0.55,
+    opacity: 0.6,
   },
   header: {
     flexDirection: 'row',
@@ -84,19 +84,19 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#222',
+    color: colors.text,
     fontVariant: ['tabular-nums'],
     width: 58,
   },
   title: {
     flex: 1,
     fontSize: 16,
-    color: '#222',
+    color: colors.text,
     marginLeft: 6,
   },
   headerPct: {
     fontSize: 13,
-    color: '#1f6feb',
+    color: colors.primary,
     fontWeight: '600',
     marginLeft: 6,
     fontVariant: ['tabular-nums'],
@@ -105,23 +105,23 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 64,
     fontSize: 13,
-    color: '#555',
+    color: colors.textSecondary,
   },
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     marginLeft: 8,
   },
   badgeDone: {
-    backgroundColor: '#d9f0d9',
+    backgroundColor: colors.badgeDone,
   },
   badgeSkipped: {
-    backgroundColor: '#f0e0d9',
+    backgroundColor: colors.badgeSkipped,
   },
   badgeText: {
     fontSize: 12,
-    color: '#222',
+    color: colors.text,
   },
   actions: {
     flexDirection: 'row',
@@ -129,15 +129,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   actionButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderRadius: radius.md,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.75,
   },
   doneButton: {
-    backgroundColor: '#1f6feb',
+    backgroundColor: colors.primary,
   },
   doneText: {
     color: '#fff',
@@ -149,6 +149,6 @@ const styles = StyleSheet.create({
     marginLeft: 64,
     fontSize: 13,
     fontStyle: 'italic',
-    color: '#555',
+    color: colors.textSecondary,
   },
 });

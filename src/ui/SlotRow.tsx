@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { minutesToHHMM } from '../domain/time';
 import type { Slot } from '../domain/types';
+import { colors, radius, shadow } from './theme';
 
 type Props = {
   slot: Slot;
@@ -9,7 +10,7 @@ type Props = {
 
 const TYPE_LABEL: Record<Slot['type'], string> = {
   meal: 'Mahlzeit',
-  med: 'Medikament',
+  med:  'Medikament',
 };
 
 export function SlotRow({ slot, onPress }: Props) {
@@ -34,21 +35,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingVertical: 13,
     paddingHorizontal: 14,
     marginBottom: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ddd',
+    ...shadow.card,
   },
   pressed: {
-    backgroundColor: '#f5f7fb',
+    backgroundColor: colors.surfaceAlt,
   },
   time: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#222',
+    color: colors.text,
     fontVariant: ['tabular-nums'],
     width: 62,
   },
@@ -58,16 +58,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    color: '#222',
+    color: colors.text,
   },
   subtitle: {
     fontSize: 12,
-    color: '#888',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   chevron: {
     fontSize: 22,
-    color: '#bbb',
+    color: colors.textMuted,
     paddingHorizontal: 6,
   },
 });

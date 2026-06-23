@@ -1,8 +1,9 @@
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { getDb } from '../src/db';
+import { colors } from '../src/ui/theme';
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -26,19 +27,32 @@ export default function RootLayout() {
   if (!ready) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <Tabs initialRouteName="today" screenOptions={{ headerShown: false }}>
+    <Tabs
+      initialRouteName="today"
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.borderLight,
+          borderTopWidth: StyleSheet.hairlineWidth,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+      }}
+    >
       <Tabs.Screen
         name="today"
         options={{
           title: 'Heute',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="today-outline" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -47,7 +61,7 @@ export default function RootLayout() {
         options={{
           title: 'Plan',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+            <Ionicons name="clipboard-outline" size={size} color={color} />
           ),
         }}
       />
@@ -74,6 +88,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  errorText: { color: '#b00020', textAlign: 'center', marginTop: 8 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.background },
+  errorText: { color: colors.error, textAlign: 'center', marginTop: 8 },
 });

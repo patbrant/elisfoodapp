@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createSlot, getActivePlanVersionId, listSlots } from '../../src/services/planService';
 import { SlotRow } from '../../src/ui/SlotRow';
+import { colors, radius } from '../../src/ui/theme';
 import type { Slot, SlotType } from '../../src/domain/types';
 
 const DEFAULT_TIME_MINUTES = 7 * 60;
@@ -124,7 +125,7 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: colors.background,
   },
   scroll: {
     padding: 16,
@@ -133,12 +134,12 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111',
+    color: colors.text,
     marginBottom: 16,
   },
   empty: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginBottom: 16,
     paddingHorizontal: 4,
@@ -150,18 +151,18 @@ const styles = StyleSheet.create({
   },
   addButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 13,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
   addPressed: {
     opacity: 0.8,
   },
   addMeal: {
-    backgroundColor: '#1f6feb',
+    backgroundColor: colors.primary,
   },
   addMed: {
-    backgroundColor: '#6a4cd9',
+    backgroundColor: colors.secondary,
   },
   addText: {
     color: '#fff',
@@ -173,17 +174,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: colors.background,
   },
   errorTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#b00020',
+    color: colors.error,
     marginBottom: 6,
   },
   errorBody: {
     fontSize: 14,
-    color: '#b00020',
+    color: colors.error,
     textAlign: 'center',
   },
 });

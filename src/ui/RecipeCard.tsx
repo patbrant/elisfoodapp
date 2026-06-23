@@ -8,6 +8,7 @@ import {
 } from '../domain/actualsMath';
 import type { TodayRecipeItem } from '../domain/types';
 import { DeliveryBadge } from './DeliveryBadge';
+import { colors } from './theme';
 
 type Props = {
   items: TodayRecipeItem[];
@@ -17,7 +18,7 @@ type Props = {
   onActualChange: (itemId: string, componentId: string, text: string) => void;
 };
 
-export function RecipeCard({ items, totalMl, editable, draftActuals, onActualChange }: Props) {
+export function RecipeCard({ items, editable, draftActuals, onActualChange }: Props) {
   const pairs: TargetActualPair[] = items.map((it) => ({ ml: it.ml, actualMl: it.actualMl }));
 
   return (
@@ -62,7 +63,7 @@ export function RecipeCard({ items, totalMl, editable, draftActuals, onActualCha
                 onChangeText={(t) => onActualChange(r.itemId, r.componentId, t)}
                 keyboardType="number-pad"
                 placeholder="0"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={colors.textMuted}
                 editable={editable}
                 maxLength={4}
               />
@@ -83,12 +84,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#ccc',
+    borderTopColor: colors.borderLight,
   },
   row: {
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.borderLight,
   },
   line1: {
     flexDirection: 'row',
@@ -103,25 +104,25 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 14,
-    color: '#222',
+    color: colors.text,
     flexShrink: 1,
   },
   target: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textSecondary,
     marginRight: 10,
     fontVariant: ['tabular-nums'],
   },
   percent: {
     fontSize: 13,
-    color: '#111',
+    color: colors.text,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
     minWidth: 42,
     textAlign: 'right',
   },
   percentZero: {
-    color: '#999',
+    color: colors.textMuted,
     fontWeight: '400',
   },
   line2: {
@@ -132,38 +133,38 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#bbb',
+    borderColor: colors.border,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
     fontSize: 14,
-    color: '#111',
+    color: colors.text,
     fontVariant: ['tabular-nums'],
     minWidth: 56,
     textAlign: 'right',
   },
   inputReadonly: {
-    backgroundColor: '#f5f5f5',
-    color: '#555',
+    backgroundColor: colors.borderLight,
+    color: colors.textSecondary,
   },
   inputUnit: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textSecondary,
   },
   suggestion: {
     fontSize: 12,
-    color: '#0a7d2c',
+    color: colors.suggestion,
     fontStyle: 'italic',
     marginLeft: 6,
   },
   tubeHint: {
     fontSize: 12,
-    color: '#7a5c00',
+    color: colors.tubeLoss,
     fontStyle: 'italic',
     marginTop: 2,
     marginBottom: 2,
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   total: {
     marginTop: 8,
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
 });

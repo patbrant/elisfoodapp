@@ -19,6 +19,7 @@ import {
   touchLastUsed,
 } from '../services/componentService';
 import type { Component, DeliveryForm } from '../domain/types';
+import { colors, radius } from './theme';
 
 type Props = {
   visible: boolean;
@@ -143,7 +144,7 @@ export function ComponentPicker({ visible, onSelect, onClose }: Props) {
               value={query}
               onChangeText={setQuery}
               placeholder="Suche oder neuen Namen eintippen"
-              placeholderTextColor="#888"
+              placeholderTextColor={colors.textMuted}
               autoFocus
               autoCorrect={false}
               autoCapitalize="none"
@@ -274,7 +275,7 @@ function ComponentRow({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -287,11 +288,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111',
+    color: colors.text,
   },
   closeText: {
-    color: '#1f6feb',
+    color: colors.primary,
     fontSize: 15,
+    fontWeight: '500',
   },
   searchInput: {
     marginHorizontal: 16,
@@ -300,10 +302,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#bbb',
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     fontSize: 15,
-    color: '#111',
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
   body: {
     flex: 1,
@@ -315,14 +318,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   sectionEmpty: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textMuted,
     fontStyle: 'italic',
     paddingVertical: 4,
   },
@@ -330,32 +333,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.borderLight,
   },
   rowInner: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
   rowPressed: {
-    backgroundColor: '#f0f4ff',
+    backgroundColor: colors.surfaceAlt,
   },
   rowName: {
     flex: 1,
     fontSize: 15,
-    color: '#111',
+    color: colors.text,
   },
   starButton: {
     padding: 8,
   },
   star: {
     fontSize: 20,
-    color: '#bbb',
+    color: colors.starInactive,
   },
   starActive: {
-    color: '#f5a623',
+    color: colors.starActive,
   },
   createBox: {
     marginHorizontal: 16,
@@ -363,10 +366,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   createButton: {
-    backgroundColor: '#1f6feb',
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    paddingVertical: 13,
     paddingHorizontal: 14,
-    borderRadius: 8,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
   createButtonText: {
@@ -383,18 +386,18 @@ const styles = StyleSheet.create({
   formPickerLabel: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111',
+    color: colors.text,
     marginBottom: 4,
   },
   formPickerHint: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   formButton: {
-    backgroundColor: '#1f6feb',
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
   formButtonText: {
@@ -405,9 +408,9 @@ const styles = StyleSheet.create({
   formButtonNeutral: {
     backgroundColor: 'transparent',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#bbb',
+    borderColor: colors.border,
   },
   formButtonNeutralText: {
-    color: '#555',
+    color: colors.textSecondary,
   },
 });
