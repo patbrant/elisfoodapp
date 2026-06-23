@@ -50,7 +50,7 @@ export default function TodayScreen() {
     );
   }, []);
 
-  const applyActual = useCallback((slotId: string, componentId: string, ml: number | null) => {
+  const applyActual = useCallback((slotId: string, itemId: string, ml: number | null) => {
     setItems((prev) =>
       prev
         ? prev.map((it) => {
@@ -58,7 +58,7 @@ export default function TodayScreen() {
             return {
               ...it,
               effectiveRecipe: it.effectiveRecipe.map((r) =>
-                r.componentId === componentId ? { ...r, actualMl: ml } : r,
+                r.itemId === itemId ? { ...r, actualMl: ml } : r,
               ),
             };
           })
@@ -67,11 +67,11 @@ export default function TodayScreen() {
   }, []);
 
   const handleActualChange = useCallback(
-    (slotId: string, componentId: string, text: string) => {
-      const draftKey = `${slotId}:${componentId}`;
+    (slotId: string, itemId: string, componentId: string, text: string) => {
+      const draftKey = `${slotId}:${itemId}`;
       setDraftActuals((prev) => ({
         ...prev,
-        [slotId]: { ...(prev[slotId] ?? {}), [componentId]: text },
+        [slotId]: { ...(prev[slotId] ?? {}), [itemId]: text },
       }));
 
       const existing = timersRef.current.get(draftKey);
@@ -84,22 +84,22 @@ export default function TodayScreen() {
         if (parsed !== null && Number.isNaN(parsed)) {
           setDraftActuals((prev) => {
             const slotDraft = { ...(prev[slotId] ?? {}) };
-            delete slotDraft[componentId];
+            delete slotDraft[itemId];
             return { ...prev, [slotId]: slotDraft };
           });
           return;
         }
         try {
           if (parsed === null) {
-            await removeActual(date, slotId, componentId);
-            applyActual(slotId, componentId, null);
+            await removeActual(date, slotId, itemId);
+            applyActual(slotId, itemId, null);
           } else {
-            await setActualMl(date, slotId, componentId, parsed);
-            applyActual(slotId, componentId, Math.max(0, parsed));
+            await setActualMl(date, slotId, itemId, componentId, parsed);
+            applyActual(slotId, itemId, Math.max(0, parsed));
           }
           setDraftActuals((prev) => {
             const slotDraft = { ...(prev[slotId] ?? {}) };
-            delete slotDraft[componentId];
+            delete slotDraft[itemId];
             return { ...prev, [slotId]: slotDraft };
           });
         } catch (err) {

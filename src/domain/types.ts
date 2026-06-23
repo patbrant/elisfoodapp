@@ -48,6 +48,7 @@ export type Event = {
 };
 
 export type TodayRecipeItem = {
+  itemId: string;
   componentId: string;
   name: string;
   deliveryForm: DeliveryForm | null;
@@ -67,6 +68,7 @@ export type DayActual = {
   id: string;
   date: string;
   slotId: string;
+  itemKey: string;
   componentId: string;
   ml: number;
   updatedAt: string;

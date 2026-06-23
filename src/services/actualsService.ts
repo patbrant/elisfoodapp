@@ -6,6 +6,7 @@ import type { DayActual } from '../domain/types';
 export async function setActualMl(
   date: string,
   slotId: string,
+  itemKey: string,
   componentId: string,
   ml: number,
 ): Promise<DayActual> {
@@ -15,25 +16,25 @@ export async function setActualMl(
   const id = Crypto.randomUUID();
 
   await db.runAsync(
-    `INSERT INTO day_actuals (id, date, slot_id, component_id, ml, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)
-     ON CONFLICT(date, slot_id, component_id) DO UPDATE SET ml = excluded.ml, updated_at = excluded.updated_at`,
-    [id, date, slotId, componentId, clamped, updatedAt],
+    `INSERT INTO day_actuals (id, date, slot_id, item_key, component_id, ml, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(date, slot_id, item_key) DO UPDATE SET ml = excluded.ml, updated_at = excluded.updated_at`,
+    [id, date, slotId, itemKey, componentId, clamped, updatedAt],
   );
 
   const row = await db.getFirstAsync<DayActualRow>(
-    'SELECT * FROM day_actuals WHERE date = ? AND slot_id = ? AND component_id = ?',
-    [date, slotId, componentId],
+    'SELECT * FROM day_actuals WHERE date = ? AND slot_id = ? AND item_key = ?',
+    [date, slotId, itemKey],
   );
   if (!row) throw new Error('day_actual missing after upsert');
   return mapDayActual(row);
 }
 
-export async function removeActual(date: string, slotId: string, componentId: string): Promise<void> {
+export async function removeActual(date: string, slotId: string, itemKey: string): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'DELETE FROM day_actuals WHERE date = ? AND slot_id = ? AND component_id = ?',
-    [date, slotId, componentId],
+    'DELETE FROM day_actuals WHERE date = ? AND slot_id = ? AND item_key = ?',
+    [date, slotId, itemKey],
   );
 }
 

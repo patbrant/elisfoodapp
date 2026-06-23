@@ -14,7 +14,7 @@ type Props = {
   totalMl: number;
   editable: boolean;
   draftActuals: Record<string, string>;
-  onActualChange: (componentId: string, text: string) => void;
+  onActualChange: (itemId: string, componentId: string, text: string) => void;
 };
 
 export function RecipeCard({ items, totalMl, editable, draftActuals, onActualChange }: Props) {
@@ -28,7 +28,7 @@ export function RecipeCard({ items, totalMl, editable, draftActuals, onActualCha
         const isEmpty = r.actualMl === null || r.actualMl === 0;
         const showSuggestion = editable && isEmpty && suggestion > 0;
         const pct = componentPercentage(pairs[idx]);
-        const draftValue = draftActuals[r.componentId];
+        const draftValue = draftActuals[r.itemId];
         const value = draftValue !== undefined
           ? draftValue
           : r.actualMl !== null
@@ -59,7 +59,7 @@ export function RecipeCard({ items, totalMl, editable, draftActuals, onActualCha
               <TextInput
                 style={[styles.input, !editable && styles.inputReadonly]}
                 value={value}
-                onChangeText={(t) => onActualChange(r.componentId, t)}
+                onChangeText={(t) => onActualChange(r.itemId, r.componentId, t)}
                 keyboardType="number-pad"
                 placeholder="0"
                 placeholderTextColor="#bbb"

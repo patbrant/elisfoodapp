@@ -8,7 +8,7 @@ type Props = {
   item: TodayItem;
   draftActuals: Record<string, string>;
   onDone: (slotId: string) => void;
-  onActualChange: (slotId: string, componentId: string, text: string) => void;
+  onActualChange: (slotId: string, itemId: string, componentId: string, text: string) => void;
 };
 
 export function TimelineItemCard({ item, draftActuals, onDone, onActualChange }: Props) {
@@ -39,7 +39,7 @@ export function TimelineItemCard({ item, draftActuals, onDone, onActualChange }:
           totalMl={totalMl ?? 0}
           editable={!hasEvent}
           draftActuals={draftActuals}
-          onActualChange={(componentId, text) => onActualChange(slot.id, componentId, text)}
+          onActualChange={(itemId, componentId, text) => onActualChange(slot.id, itemId, componentId, text)}
         />
       ) : null}
       {event?.note ? <Text style={styles.note}>„{event.note}"</Text> : null}

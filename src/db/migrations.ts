@@ -130,7 +130,27 @@ DROP TABLE meal_recipe_items;
 ALTER TABLE meal_recipe_items_new RENAME TO meal_recipe_items;
 `;
 
-const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002, MIGRATION_003, MIGRATION_004, MIGRATION_005];
+const MIGRATION_006 = `
+CREATE TABLE day_actuals_new (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  slot_id TEXT NOT NULL,
+  item_key TEXT NOT NULL,
+  component_id TEXT NOT NULL,
+  ml INTEGER NOT NULL CHECK (ml >= 0),
+  updated_at TEXT NOT NULL,
+  UNIQUE(date, slot_id, item_key),
+  FOREIGN KEY(slot_id) REFERENCES slots(id) ON DELETE CASCADE,
+  FOREIGN KEY(component_id) REFERENCES components(id) ON DELETE CASCADE
+);
+INSERT INTO day_actuals_new
+  SELECT id, date, slot_id, component_id, component_id, ml, updated_at
+  FROM day_actuals;
+DROP TABLE day_actuals;
+ALTER TABLE day_actuals_new RENAME TO day_actuals;
+`;
+
+const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002, MIGRATION_003, MIGRATION_004, MIGRATION_005, MIGRATION_006];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

@@ -57,6 +57,7 @@ export type DayActualRow = {
   id: string;
   date: string;
   slot_id: string;
+  item_key: string;
   component_id: string;
   ml: number;
   updated_at: string;
@@ -100,6 +101,7 @@ export function mapDayActual(r: DayActualRow): DayActual {
     id: r.id,
     date: r.date,
     slotId: r.slot_id,
+    itemKey: r.item_key,
     componentId: r.component_id,
     ml: r.ml,
     updatedAt: r.updated_at,

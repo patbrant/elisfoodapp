@@ -45,14 +45,16 @@ async function loadComponentsByIds(db: SQLiteDatabase, ids: string[]): Promise<M
   return map;
 }
 
-type SnapshotRecipeItem = {
+type RawSnapshotItem = {
   componentId: string;
   ml: number;
   sortOrder: number;
   deliveryForm?: import('../domain/types').DeliveryForm | null;
 };
 
-function parseOverride(json: string, slotId: string): SnapshotRecipeItem[] | null {
+type SnapshotRecipeItem = RawSnapshotItem & { itemId: string };
+
+function parseOverride(json: string, slotId: string): RawSnapshotItem[] | null {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -87,9 +89,9 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
   ]);
   const overridesBySlot = new Map(overrideRows.map((r) => [r.slot_id, r]));
   const eventsBySlot = new Map(eventRows.map((r) => [r.slot_id, r]));
-  const actualsBySlotComponent = new Map<string, number>();
+  const actualsByItemKey = new Map<string, number>();
   for (const a of actualRows) {
-    actualsBySlotComponent.set(`${a.slot_id}:${a.component_id}`, a.ml);
+    actualsByItemKey.set(`${a.slot_id}:${a.item_key}`, a.ml);
   }
 
   const mealSlotIds = slotRows.filter((s) => s.type === 'meal').map((s) => s.id);
@@ -101,8 +103,12 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
   }
   const parsedOverrides = new Map<string, SnapshotRecipeItem[]>();
   for (const ov of overrideRows) {
-    const items = parseOverride(ov.override_json, ov.slot_id);
-    if (items) {
+    const raw = parseOverride(ov.override_json, ov.slot_id);
+    if (raw) {
+      const items: SnapshotRecipeItem[] = raw.map((it) => ({
+        ...it,
+        itemId: `${it.componentId}:${it.deliveryForm ?? 'none'}`,
+      }));
       parsedOverrides.set(ov.slot_id, items);
       for (const it of items) componentIds.add(it.componentId);
     }
@@ -122,6 +128,7 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
     const overrideItems = parsedOverrides.get(slot.id);
     const recipeItems: SnapshotRecipeItem[] = overrideItems
       ?? (planRecipeBySlot.get(slot.id) ?? []).map((r) => ({
+        itemId: r.id,
         componentId: r.component_id,
         ml: r.ml,
         sortOrder: r.sort_order,
@@ -133,8 +140,9 @@ export async function getTodayItems(date: string): Promise<TodayItem[]> {
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((r) => {
         const comp = componentsById.get(r.componentId);
-        const actualMl = actualsBySlotComponent.get(`${slot.id}:${r.componentId}`);
+        const actualMl = actualsByItemKey.get(`${slot.id}:${r.itemId}`);
         return {
+          itemId: r.itemId,
           componentId: r.componentId,
           name: comp ? mapComponent(comp).name : '(unbekannt)',
           deliveryForm: r.deliveryForm ?? null,
