@@ -153,7 +153,11 @@ export async function pullAll(context: HouseholdContext): Promise<void> {
       .select('*')
       .eq('household_id', context.householdId);
 
-    if (error || !data) continue;
+    if (error) {
+      console.warn(`[pullAll] ${table}: ${error.code} ${error.message}`);
+      continue;
+    }
+    if (!data) continue;
 
     const sql = LOCAL_UPSERT_SQL[table];
     for (const row of data as RemoteRow[]) {
@@ -234,6 +238,12 @@ async function handleRealtimeChange(
 // ---- Init ----
 
 export async function initSync(context: HouseholdContext): Promise<() => void> {
+  // getSession() awaits GoTrueClient.initialize() which loads the JWT from
+  // our sqliteStorage adapter. Without this, pullAll runs before auth.uid()
+  // is available and RLS silently returns 0 rows.
+  const supabase = getSupabaseClient();
+  await supabase.auth.getSession();
+
   await pullAll(context).catch(console.warn);
   const unsubscribe = subscribeToHousehold(context, console.warn);
   return unsubscribe;
