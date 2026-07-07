@@ -126,6 +126,13 @@ CREATE INDEX IF NOT EXISTS idx_household_members_user    ON household_members(us
 -- ============================================================
 -- RLS HELPER FUNCTIONS
 -- ============================================================
+-- Lookup a household by join code without RLS (SECURITY DEFINER).
+-- Used by the join flow before the user is a member of the household.
+CREATE OR REPLACE FUNCTION get_household_id_by_code(code TEXT)
+RETURNS TEXT LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT id FROM households WHERE join_code = upper(trim(code)) LIMIT 1;
+$$;
+
 CREATE OR REPLACE FUNCTION is_household_member(hh_id TEXT)
 RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (

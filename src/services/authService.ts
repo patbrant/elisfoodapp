@@ -100,15 +100,11 @@ export async function joinHousehold(joinCode: string): Promise<HouseholdContext>
   if (authErr || !authData.user) throw new Error(authErr?.message ?? 'Anmeldung fehlgeschlagen');
   const userId = authData.user.id;
 
-  const { data: hhRows, error: hhErr } = await supabase
-    .from('households')
-    .select('id')
-    .eq('join_code', code)
-    .limit(1);
+  // Use a SECURITY DEFINER RPC so the lookup bypasses RLS —
+  // the joining user is not yet a household member, so a direct SELECT would return 0 rows.
+  const { data: householdId, error: hhErr } = await supabase.rpc('get_household_id_by_code', { code });
   if (hhErr) throw new Error(hhErr.message);
-  if (!hhRows || hhRows.length === 0) throw new Error('Ungültiger Code');
-
-  const householdId: string = hhRows[0].id;
+  if (!householdId) throw new Error('Ungültiger Code');
 
   const { error: memberErr } = await supabase.from('household_members').insert({
     id: Crypto.randomUUID(),

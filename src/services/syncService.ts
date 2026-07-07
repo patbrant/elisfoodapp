@@ -18,6 +18,9 @@ type OutboxOperation = 'upsert' | 'delete';
 
 // ---- Outbox ----
 
+// Module-level cooldown prevents repeated drain attempts after a connection-level error.
+let _drainCooldownUntil = 0;
+
 export async function enqueueOutbox(
   tableName: SyncTable,
   rowId: string,
@@ -37,6 +40,8 @@ export async function enqueueOutbox(
 }
 
 export async function drainOutbox(context: HouseholdContext): Promise<void> {
+  if (Date.now() < _drainCooldownUntil) return;
+
   const db = await getDb();
   const supabase = getSupabaseClient();
   const rows = await db.getAllAsync<{
@@ -54,24 +59,24 @@ export async function drainOutbox(context: HouseholdContext): Promise<void> {
     try {
       if (row.operation === 'upsert') {
         const remotePayload = { ...payload, household_id: context.householdId };
-        const conflictCol = table === 'events'
-          ? 'id'
-          : table === 'day_actuals'
-          ? 'id'
-          : 'id';
-        const { error } = await supabase
-          .from(table)
-          .upsert(remotePayload, { onConflict: conflictCol });
+        const { error } = await supabase.from(table).upsert(remotePayload, { onConflict: 'id' });
         if (error) {
-          if (isRetryable(error.code)) break;
-          // Non-retryable (e.g. RLS violation, constraint) — drop the entry
+          if (isRetryable(error.code)) {
+            _drainCooldownUntil = Date.now() + 30_000; // 30s pause after connection error
+            break;
+          }
+          // Non-retryable (RLS, constraint) — drop the entry and continue
         }
       } else {
         const { error } = await supabase.from(table).delete().eq('id', row.row_id);
-        if (error && isRetryable(error.code)) break;
+        if (error && isRetryable(error.code)) {
+          _drainCooldownUntil = Date.now() + 30_000;
+          break;
+        }
       }
     } catch {
-      break; // Network error — stop draining, retry next time
+      _drainCooldownUntil = Date.now() + 30_000;
+      break;
     }
 
     await db.runAsync('DELETE FROM sync_outbox WHERE id = ?', [row.id]);
@@ -79,9 +84,11 @@ export async function drainOutbox(context: HouseholdContext): Promise<void> {
 }
 
 function isRetryable(code: string | undefined): boolean {
-  if (!code) return true; // Unknown error — assume network issue, retry
-  const clientErrors = ['23', '42']; // 23xxx = constraint, 42xxx = auth/permission
-  return !clientErrors.some((prefix) => code.startsWith(prefix));
+  if (!code) return true;
+  // 23xxx = constraint violation, 42xxx = permission/syntax — drop the entry
+  // 25xxx = transaction aborted (connection-level) — pause and retry later
+  const dropErrors = ['23', '42'];
+  return !dropErrors.some((prefix) => code.startsWith(prefix));
 }
 
 // ---- Pull ----
