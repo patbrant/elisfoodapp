@@ -169,9 +169,9 @@ CREATE POLICY "members read memberships"
   ON household_members FOR SELECT
   USING (user_id = auth.uid() OR is_household_member(household_id));
 
-CREATE POLICY "self join as caregiver"
+CREATE POLICY "self join household"
   ON household_members FOR INSERT
-  WITH CHECK (user_id = auth.uid() AND role = 'caregiver');
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "admin promote member"
   ON household_members FOR UPDATE
