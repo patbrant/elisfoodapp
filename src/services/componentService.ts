@@ -2,6 +2,8 @@ import * as Crypto from 'expo-crypto';
 import { getDb } from '../db';
 import { type ComponentRow, mapComponent } from '../db/queries';
 import type { Component } from '../domain/types';
+import { getLocalHouseholdContext } from './authService';
+import { drainOutbox, enqueueOutbox } from './syncService';
 
 export async function listFavorites(): Promise<Component[]> {
   const db = await getDb();
@@ -41,6 +43,9 @@ export async function createComponent(
     'INSERT INTO components (id, name, category, is_favorite, last_used_at) VALUES (?, ?, ?, 0, NULL)',
     [id, name, category],
   );
+  await enqueueOutbox('components', id, 'upsert', { id, name, category });
+  getLocalHouseholdContext().then((ctx) => { if (ctx) drainOutbox(ctx).catch(console.warn); });
+
   return {
     id,
     name,

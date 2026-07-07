@@ -1,5 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useHousehold } from '../../src/context/HouseholdContext';
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +20,7 @@ const DEFAULT_TIME_MINUTES = 7 * 60;
 
 export default function PlanScreen() {
   const router = useRouter();
+  const { isAdmin } = useHousehold();
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [planVersionId, setPlanVersionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,20 +105,22 @@ export default function PlanScreen() {
         ) : (
           slots.map((slot) => <SlotRow key={slot.id} slot={slot} onPress={handleRowPress} />)
         )}
-        <View style={styles.addRow}>
-          <Pressable
-            style={({ pressed }) => [styles.addButton, styles.addMeal, pressed && styles.addPressed]}
-            onPress={() => handleAdd('meal')}
-          >
-            <Text style={styles.addText}>+ Mahlzeit</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.addButton, styles.addMed, pressed && styles.addPressed]}
-            onPress={() => handleAdd('med')}
-          >
-            <Text style={styles.addText}>+ Medikament</Text>
-          </Pressable>
-        </View>
+        {isAdmin && (
+          <View style={styles.addRow}>
+            <Pressable
+              style={({ pressed }) => [styles.addButton, styles.addMeal, pressed && styles.addPressed]}
+              onPress={() => handleAdd('meal')}
+            >
+              <Text style={styles.addText}>+ Mahlzeit</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.addButton, styles.addMed, pressed && styles.addPressed]}
+              onPress={() => handleAdd('med')}
+            >
+              <Text style={styles.addText}>+ Medikament</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -32,7 +32,9 @@
       "router": {},
       "eas": {
         "projectId": "d5f190f2-5e65-4463-85fd-487675002270"
-      }
+      },
+      "supabaseUrl": "",
+      "supabaseAnonKey": ""
     },
     "owner": "patbrans-org"
   }

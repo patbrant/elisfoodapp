@@ -1,6 +1,8 @@
 import * as Crypto from 'expo-crypto';
 import { getDb } from '../db';
 import type { Event, EventStatus } from '../domain/types';
+import { getLocalHouseholdContext } from './authService';
+import { drainOutbox, enqueueOutbox } from './syncService';
 
 export class EventAlreadyExistsError extends Error {
   constructor(date: string, slotId: string) {
@@ -40,6 +42,9 @@ export async function createEvent(
   }
 
   // TODO(slice-5): notificationService.cancelSlotNotifications(date, slotId)
+
+  await enqueueOutbox('events', id, 'upsert', { id, date, slot_id: slotId, status, created_at: createdAt, note: cleanNote });
+  getLocalHouseholdContext().then((ctx) => { if (ctx) drainOutbox(ctx).catch(console.warn); });
 
   return {
     id,

@@ -9,6 +9,15 @@ import {
 } from '../db/queries';
 import { toLocalISODate } from '../domain/time';
 import type { DeliveryForm, RecipeItem, Slot, SlotType } from '../domain/types';
+import { getLocalHouseholdContext } from './authService';
+import { drainOutbox, enqueueOutbox } from './syncService';
+
+function syncPush(tableName: Parameters<typeof enqueueOutbox>[0], rowId: string, op: Parameters<typeof enqueueOutbox>[2], payload: Record<string, unknown>): void {
+  enqueueOutbox(tableName, rowId, op, payload)
+    .then(() => getLocalHouseholdContext())
+    .then((ctx) => { if (ctx) drainOutbox(ctx).catch(console.warn); })
+    .catch(console.warn);
+}
 
 const DEFAULT_RECIPE_ML = 30;
 
@@ -64,7 +73,7 @@ export async function createSlot(
     [id, planVersionId, partial.type, partial.title, partial.info ?? null, partial.timeMinutes, sortOrder, createdAt],
   );
 
-  return {
+  const slot: Slot = {
     id,
     planVersionId,
     type: partial.type,
@@ -73,6 +82,8 @@ export async function createSlot(
     timeMinutes: partial.timeMinutes,
     sortOrder,
   };
+  syncPush('slots', id, 'upsert', { id, plan_version_id: planVersionId, type: slot.type, title: slot.title, info: slot.info, time_minutes: slot.timeMinutes, sort_order: slot.sortOrder, created_at: createdAt });
+  return slot;
 }
 
 export async function updateSlot(slotId: string, patch: SlotPatch): Promise<void> {
@@ -101,11 +112,17 @@ export async function updateSlot(slotId: string, patch: SlotPatch): Promise<void
 
   values.push(slotId);
   await db.runAsync(`UPDATE slots SET ${sets.join(', ')} WHERE id = ?`, values);
+
+  const updated = await db.getFirstAsync<SlotRow>('SELECT * FROM slots WHERE id = ?', [slotId]);
+  if (updated) {
+    syncPush('slots', slotId, 'upsert', { id: slotId, plan_version_id: updated.plan_version_id, type: updated.type, title: updated.title, info: updated.info, time_minutes: updated.time_minutes, sort_order: updated.sort_order, created_at: updated.created_at });
+  }
 }
 
 export async function deleteSlot(slotId: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM slots WHERE id = ?', [slotId]);
+  syncPush('slots', slotId, 'delete', { id: slotId });
 }
 
 export async function listRecipeItems(slotId: string): Promise<RecipeItemWithMeta[]> {
@@ -145,7 +162,9 @@ export async function addRecipeItem(
     [id, slotId, componentId, clamped, sortOrder, deliveryForm],
   );
 
-  return { id, slotId, componentId, ml: clamped, sortOrder, deliveryForm };
+  const item: RecipeItem = { id, slotId, componentId, ml: clamped, sortOrder, deliveryForm };
+  syncPush('meal_recipe_items', id, 'upsert', { id, slot_id: slotId, component_id: componentId, ml: clamped, sort_order: sortOrder, delivery_form: deliveryForm });
+  return item;
 }
 
 export async function updateRecipeItemDeliveryForm(
@@ -154,15 +173,20 @@ export async function updateRecipeItemDeliveryForm(
 ): Promise<void> {
   const db = await getDb();
   await db.runAsync('UPDATE meal_recipe_items SET delivery_form = ? WHERE id = ?', [deliveryForm, itemId]);
+  const row = await db.getFirstAsync<RecipeItemRow>('SELECT * FROM meal_recipe_items WHERE id = ?', [itemId]);
+  if (row) syncPush('meal_recipe_items', itemId, 'upsert', { id: itemId, slot_id: row.slot_id, component_id: row.component_id, ml: row.ml, sort_order: row.sort_order, delivery_form: deliveryForm });
 }
 
 export async function updateRecipeItemMl(itemId: string, ml: number): Promise<void> {
   const db = await getDb();
   const clamped = Math.max(0, Math.floor(ml));
   await db.runAsync('UPDATE meal_recipe_items SET ml = ? WHERE id = ?', [clamped, itemId]);
+  const row = await db.getFirstAsync<RecipeItemRow>('SELECT * FROM meal_recipe_items WHERE id = ?', [itemId]);
+  if (row) syncPush('meal_recipe_items', itemId, 'upsert', { id: itemId, slot_id: row.slot_id, component_id: row.component_id, ml: clamped, sort_order: row.sort_order, delivery_form: row.delivery_form });
 }
 
 export async function removeRecipeItem(itemId: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM meal_recipe_items WHERE id = ?', [itemId]);
+  syncPush('meal_recipe_items', itemId, 'delete', { id: itemId });
 }

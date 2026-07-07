@@ -150,7 +150,24 @@ DROP TABLE day_actuals;
 ALTER TABLE day_actuals_new RENAME TO day_actuals;
 `;
 
-const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002, MIGRATION_003, MIGRATION_004, MIGRATION_005, MIGRATION_006];
+const MIGRATION_007 = `
+CREATE TABLE IF NOT EXISTS sync_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sync_outbox (
+  id         TEXT PRIMARY KEY,
+  table_name TEXT NOT NULL,
+  row_id     TEXT NOT NULL,
+  operation  TEXT NOT NULL CHECK (operation IN ('upsert', 'delete')),
+  payload    TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(table_name, row_id, operation)
+);
+`;
+
+const MIGRATIONS: ReadonlyArray<string> = [MIGRATION_001, MIGRATION_002, MIGRATION_003, MIGRATION_004, MIGRATION_005, MIGRATION_006, MIGRATION_007];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

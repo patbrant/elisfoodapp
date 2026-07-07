@@ -1,5 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useHousehold } from '../../../src/context/HouseholdContext';
 import {
   ActivityIndicator,
   Alert,
@@ -35,6 +36,7 @@ const TITLE_DEBOUNCE_MS = 300;
 export default function SlotEditorScreen() {
   const { slotId } = useLocalSearchParams<{ slotId: string }>();
   const router = useRouter();
+  const { isAdmin } = useHousehold();
   const [slot, setSlot] = useState<Slot | null>(null);
   const [recipeItems, setRecipeItems] = useState<RecipeItemWithMeta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -257,36 +259,39 @@ export default function SlotEditorScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Section label="Zeit (HH:MM)">
           <TextInput
-            style={[styles.input, timeInvalid && styles.inputInvalid]}
+            style={[styles.input, timeInvalid && styles.inputInvalid, !isAdmin && styles.inputReadOnly]}
             value={timeText}
-            onChangeText={setTimeText}
-            onBlur={handleTimeBlur}
+            onChangeText={isAdmin ? setTimeText : undefined}
+            onBlur={isAdmin ? handleTimeBlur : undefined}
             placeholder="HH:MM"
             keyboardType="numbers-and-punctuation"
             maxLength={5}
+            editable={isAdmin}
           />
           {timeInvalid ? <Text style={styles.errorHint}>Bitte HH:MM (00:00–23:59).</Text> : null}
         </Section>
 
         <Section label="Titel">
           <TextInput
-            style={styles.input}
+            style={[styles.input, !isAdmin && styles.inputReadOnly]}
             value={titleText}
-            onChangeText={handleTitleChange}
-            onBlur={flushTitle}
+            onChangeText={isAdmin ? handleTitleChange : undefined}
+            onBlur={isAdmin ? flushTitle : undefined}
+            editable={isAdmin}
           />
         </Section>
 
         <Section label="Info (optional)">
           <TextInput
-            style={[styles.input, styles.inputMultiline]}
+            style={[styles.input, styles.inputMultiline, !isAdmin && styles.inputReadOnly]}
             value={infoText}
-            onChangeText={handleInfoChange}
-            onBlur={flushInfo}
+            onChangeText={isAdmin ? handleInfoChange : undefined}
+            onBlur={isAdmin ? flushInfo : undefined}
             multiline
             numberOfLines={2}
             placeholder="Notiz für den Tag"
             placeholderTextColor="#999"
+            editable={isAdmin}
           />
         </Section>
 
@@ -304,40 +309,52 @@ export default function SlotEditorScreen() {
                     <Text style={styles.recipeName} numberOfLines={1}>
                       {item.name}
                     </Text>
-                    <Pressable onPress={() => handleFormChange(item.id)} hitSlop={8}>
-                      {item.deliveryForm ? (
-                        <DeliveryBadge form={item.deliveryForm} />
-                      ) : (
-                        <Text style={styles.addFormText}>Form</Text>
-                      )}
-                    </Pressable>
+                    {isAdmin ? (
+                      <Pressable onPress={() => handleFormChange(item.id)} hitSlop={8}>
+                        {item.deliveryForm ? (
+                          <DeliveryBadge form={item.deliveryForm} />
+                        ) : (
+                          <Text style={styles.addFormText}>Form</Text>
+                        )}
+                      </Pressable>
+                    ) : item.deliveryForm ? (
+                      <DeliveryBadge form={item.deliveryForm} />
+                    ) : null}
                   </View>
-                  <Stepper
-                    value={item.ml}
-                    onChange={(v) => handleStepperChange(item.id, v)}
-                  />
-                  <Pressable
-                    onPress={() => handleRemoveItem(item.id)}
-                    style={styles.removeButton}
-                    hitSlop={6}
-                  >
-                    <Text style={styles.removeText}>✕</Text>
-                  </Pressable>
+                  <View pointerEvents={isAdmin ? 'auto' : 'none'}>
+                    <Stepper
+                      value={item.ml}
+                      onChange={(v) => handleStepperChange(item.id, v)}
+                    />
+                  </View>
+                  {isAdmin && (
+                    <Pressable
+                      onPress={() => handleRemoveItem(item.id)}
+                      style={styles.removeButton}
+                      hitSlop={6}
+                    >
+                      <Text style={styles.removeText}>✕</Text>
+                    </Pressable>
+                  )}
                 </View>
               ))
             )}
-            <Pressable
-              style={({ pressed }) => [styles.addComponent, pressed && styles.addComponentPressed]}
-              onPress={() => setPickerVisible(true)}
-            >
-              <Text style={styles.addComponentText}>+ Komponente</Text>
-            </Pressable>
+            {isAdmin && (
+              <Pressable
+                style={({ pressed }) => [styles.addComponent, pressed && styles.addComponentPressed]}
+                onPress={() => setPickerVisible(true)}
+              >
+                <Text style={styles.addComponentText}>+ Komponente</Text>
+              </Pressable>
+            )}
           </Section>
         ) : null}
 
-        <Pressable style={styles.deleteButton} onPress={handleDelete}>
-          <Text style={styles.deleteText}>Slot löschen</Text>
-        </Pressable>
+        {isAdmin && (
+          <Pressable style={styles.deleteButton} onPress={handleDelete}>
+            <Text style={styles.deleteText}>Slot löschen</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       <ComponentPicker
@@ -398,6 +415,10 @@ const styles = StyleSheet.create({
   inputMultiline: {
     minHeight: 60,
     textAlignVertical: 'top',
+  },
+  inputReadOnly: {
+    backgroundColor: colors.background,
+    color: colors.textSecondary,
   },
   inputInvalid: {
     borderColor: colors.error,
