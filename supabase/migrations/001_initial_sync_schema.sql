@@ -160,6 +160,10 @@ ALTER TABLE push_tokens         ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "members read own household"
   ON households FOR SELECT USING (is_household_member(id));
 
+CREATE POLICY "authenticated users create household"
+  ON households FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
 -- HOUSEHOLD_MEMBERS
 CREATE POLICY "members read memberships"
   ON household_members FOR SELECT
