@@ -120,6 +120,19 @@ export async function joinHousehold(joinCode: string): Promise<HouseholdContext>
 
   const context: HouseholdContext = { householdId, userId, role: 'caregiver' };
   await persistContext(context);
+
+  // Remove local seed data so pullAll can fill SQLite cleanly from Supabase.
+  // Without this, Device B has two plan_versions (own seed + Supabase) and
+  // getActivePlanVersion returns the wrong one.
+  const db = await getDb();
+  await db.runAsync('DELETE FROM meal_recipe_items');
+  await db.runAsync('DELETE FROM day_actuals');
+  await db.runAsync('DELETE FROM day_overrides');
+  await db.runAsync('DELETE FROM events');
+  await db.runAsync('DELETE FROM slots');
+  await db.runAsync('DELETE FROM components');
+  await db.runAsync('DELETE FROM plan_versions');
+
   return context;
 }
 
