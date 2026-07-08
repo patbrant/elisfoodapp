@@ -1,9 +1,12 @@
 import * as Crypto from 'expo-crypto';
 import type { SQLiteBindParams } from 'expo-sqlite';
+import { DeviceEventEmitter } from 'react-native';
 import { getDb } from '../db';
 import { getSupabaseClient } from '../db/supabase';
 import { readSyncMeta } from './authService';
 import type { HouseholdContext } from './authService';
+
+export const SYNC_PULLED_EVENT = 'sync:pulled';
 
 type SyncTable =
   | 'plan_versions'
@@ -164,12 +167,17 @@ export async function pullAll(context: HouseholdContext): Promise<void> {
     console.log(`[pullAll] ${table}: ${data.length} rows`);
 
     const sql = LOCAL_UPSERT_SQL[table];
+    let upserted = 0;
     for (const row of data as RemoteRow[]) {
       try {
         await db.runAsync(sql, rowToParams(table, row));
-      } catch {
-        // Row failed to upsert locally — skip and continue
+        upserted++;
+      } catch (e) {
+        console.warn(`[pullAll] ${table} upsert failed:`, e);
       }
+    }
+    if (upserted !== data.length) {
+      console.warn(`[pullAll] ${table}: only ${upserted}/${data.length} rows upserted`);
     }
   }
 
@@ -178,6 +186,8 @@ export async function pullAll(context: HouseholdContext): Promise<void> {
     'INSERT INTO sync_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
     ['last_pull_at', now],
   );
+
+  DeviceEventEmitter.emit(SYNC_PULLED_EVENT);
 }
 
 // ---- Realtime ----

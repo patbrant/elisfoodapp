@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, DeviceEventEmitter, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toLocalISODate } from '../src/domain/time';
 import { colors } from '../src/ui/theme';
@@ -8,6 +8,7 @@ import type { TodayItem } from '../src/domain/types';
 import { removeActual, setActualMl } from '../src/services/actualsService';
 import { createEvent } from '../src/services/eventService';
 import { getTodayItems } from '../src/services/todayService';
+import { SYNC_PULLED_EVENT } from '../src/services/syncService';
 import { NoteModal } from '../src/ui/NoteModal';
 import { TimelineItemCard } from '../src/ui/TimelineItemCard';
 
@@ -21,21 +22,19 @@ export default function TodayScreen() {
   const [draftActuals, setDraftActuals] = useState<Record<string, Record<string, string>>>({});
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      getTodayItems(date)
-        .then((result) => {
-          if (!cancelled) setItems(result);
-        })
-        .catch((err) => {
-          if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, [date]),
-  );
+  const reload = useCallback(() => {
+    getTodayItems(date)
+      .then((result) => setItems(result))
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  }, [date]);
+
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+
+  // Reload whenever a background sync completes.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(SYNC_PULLED_EVENT, reload);
+    return () => sub.remove();
+  }, [reload]);
 
   useEffect(() => {
     const timers = timersRef.current;

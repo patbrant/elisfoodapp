@@ -1,6 +1,8 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import { useHousehold } from '../../src/context/HouseholdContext';
+import { SYNC_PULLED_EVENT } from '../../src/services/syncService';
 import {
   ActivityIndicator,
   Alert,
@@ -25,33 +27,24 @@ export default function PlanScreen() {
   const [planVersionId, setPlanVersionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      (async () => {
-        try {
-          const pvId = await getActivePlanVersionId();
-          if (!pvId) {
-            if (!cancelled) {
-              setPlanVersionId(null);
-              setSlots([]);
-            }
-            return;
-          }
-          const list = await listSlots(pvId);
-          if (!cancelled) {
-            setPlanVersionId(pvId);
-            setSlots(list);
-          }
-        } catch (err) {
-          if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, []),
-  );
+  const reload = useCallback(async () => {
+    try {
+      const pvId = await getActivePlanVersionId();
+      if (!pvId) { setPlanVersionId(null); setSlots([]); return; }
+      const list = await listSlots(pvId);
+      setPlanVersionId(pvId);
+      setSlots(list);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(SYNC_PULLED_EVENT, reload);
+    return () => sub.remove();
+  }, [reload]);
 
   const handleAdd = useCallback(
     async (type: SlotType) => {
