@@ -43,7 +43,10 @@ export async function enqueueOutbox(
 }
 
 export async function drainOutbox(context: HouseholdContext): Promise<void> {
-  if (Date.now() < _drainCooldownUntil) return;
+  if (Date.now() < _drainCooldownUntil) {
+    console.log('[outbox] skipping drain — cooldown active');
+    return;
+  }
 
   const db = await getDb();
   const supabase = getSupabaseClient();
@@ -55,6 +58,9 @@ export async function drainOutbox(context: HouseholdContext): Promise<void> {
     payload: string;
   }>('SELECT * FROM sync_outbox ORDER BY created_at ASC LIMIT 100');
 
+  if (rows.length === 0) return;
+  console.log(`[outbox] draining ${rows.length} entries`);
+
   for (const row of rows) {
     const payload = JSON.parse(row.payload) as Record<string, unknown>;
     const table = row.table_name as SyncTable;
@@ -65,20 +71,27 @@ export async function drainOutbox(context: HouseholdContext): Promise<void> {
         const { error } = await supabase.from(table).upsert(remotePayload, { onConflict: 'id' });
         if (error) {
           if (isRetryable(error.code)) {
-            _drainCooldownUntil = Date.now() + 30_000; // 30s pause after connection error
+            _drainCooldownUntil = Date.now() + 30_000;
+            console.warn(`[outbox] ${table} retryable error — pausing 30s: ${error.code} ${error.message}`);
             break;
           }
-          // Non-retryable (RLS, constraint) — drop the entry and continue
+          console.warn(`[outbox] ${table} dropped (non-retryable): ${error.code} ${error.message}`);
+        } else {
+          console.log(`[outbox] ${table} pushed ok: ${row.row_id}`);
         }
       } else {
         const { error } = await supabase.from(table).delete().eq('id', row.row_id);
         if (error && isRetryable(error.code)) {
           _drainCooldownUntil = Date.now() + 30_000;
+          console.warn(`[outbox] ${table} delete retryable error — pausing 30s: ${error.code} ${error.message}`);
           break;
         }
+        if (error) console.warn(`[outbox] ${table} delete dropped: ${error.code} ${error.message}`);
+        else console.log(`[outbox] ${table} deleted ok: ${row.row_id}`);
       }
-    } catch {
+    } catch (e) {
       _drainCooldownUntil = Date.now() + 30_000;
+      console.warn('[outbox] network error — pausing 30s:', e);
       break;
     }
 
