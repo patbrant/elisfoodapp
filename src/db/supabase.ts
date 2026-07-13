@@ -1,9 +1,13 @@
 import 'react-native-url-polyfill/auto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 import { getDb } from './index';
 
-const SUPABASE_URL: string = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_ANON_KEY: string = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+// app.config.js reads .env.local at CLI startup and exposes values via extra.
+// This is more reliable than Metro's process.env inlining which requires --clear on change.
+const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
+const SUPABASE_URL: string = extra.supabaseUrl || '';
+const SUPABASE_ANON_KEY: string = extra.supabaseAnonKey || '';
 
 // Auth session storage backed by our existing SQLite sync_meta table.
 // Avoids @react-native-async-storage which requires a native build and isn't
