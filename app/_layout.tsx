@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { getDb } from '../src/db';
 import { HouseholdCtx } from '../src/context/HouseholdContext';
@@ -51,6 +51,11 @@ export default function RootLayout() {
     };
   }, []);
 
+  const refreshContext = useCallback(async () => {
+    const ctx = await getLocalHouseholdContext();
+    setHouseholdCtx(ctx);
+  }, []);
+
   const handleSetupComplete = async (ctx: HouseholdContext) => {
     setHouseholdCtx(ctx);
     const unsub = await initSync(ctx).catch(() => () => {});
@@ -87,6 +92,7 @@ export default function RootLayout() {
         context: householdCtx,
         isAdmin: householdCtx?.role === 'admin',
         isReady: true,
+        refreshContext,
       }}
     >
       <Tabs

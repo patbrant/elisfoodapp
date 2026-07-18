@@ -67,12 +67,14 @@ export async function createHousehold(name = 'Familie'): Promise<{ joinCode: str
   const userId = authData.user.id;
 
   const joinCode = generateJoinCode();
+  const adminCode = generateJoinCode();
   const householdId = Crypto.randomUUID();
 
   const { error: hhErr } = await supabase.from('households').insert({
     id: householdId,
     name,
     join_code: joinCode,
+    admin_code: adminCode,
     timezone: 'Europe/Zurich',
     created_at: new Date().toISOString(),
   });
@@ -140,6 +142,24 @@ export async function leaveHousehold(): Promise<void> {
   await clearSyncMeta();
   const supabase = getSupabaseClient();
   await supabase.auth.signOut();
+}
+
+export async function claimAdminRole(householdId: string, code: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc('claim_admin_role', {
+    p_household_id: householdId,
+    p_code: code.trim().toUpperCase(),
+  });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Ungültiger Admin-Code.');
+  await writeSyncMeta('role', 'admin');
+}
+
+export async function getAdminCode(householdId: string): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc('get_admin_code', { p_household_id: householdId });
+  if (error) return null;
+  return (data as string | null) ?? null;
 }
 
 export async function promoteMember(targetUserId: string, householdId: string): Promise<void> {
