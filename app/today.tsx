@@ -1,12 +1,21 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, DeviceEventEmitter, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  DeviceEventEmitter,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toLocalISODate } from '../src/domain/time';
 import { colors } from '../src/ui/theme';
 import type { TodayItem } from '../src/domain/types';
-import { removeActual, setActualMl } from '../src/services/actualsService';
-import { createEvent } from '../src/services/eventService';
+import { removeActual, removeAllActualsForSlot, setActualMl } from '../src/services/actualsService';
+import { createEvent, deleteEvent } from '../src/services/eventService';
 import { getTodayItems } from '../src/services/todayService';
 import { SYNC_PULLED_EVENT } from '../src/services/syncService';
 import { NoteModal } from '../src/ui/NoteModal';
@@ -30,7 +39,6 @@ export default function TodayScreen() {
 
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
-  // Reload whenever a background sync completes.
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(SYNC_PULLED_EVENT, reload);
     return () => sub.remove();
@@ -60,6 +68,23 @@ export default function TodayScreen() {
               effectiveRecipe: it.effectiveRecipe.map((r) =>
                 r.itemId === itemId ? { ...r, actualMl: ml } : r,
               ),
+            };
+          })
+        : prev,
+    );
+  }, []);
+
+  const applyReset = useCallback((slotId: string) => {
+    setItems((prev) =>
+      prev
+        ? prev.map((it) => {
+            if (it.slot.id !== slotId) return it;
+            return {
+              ...it,
+              event: undefined,
+              effectiveRecipe: it.effectiveRecipe
+                ? it.effectiveRecipe.map((r) => ({ ...r, actualMl: null }))
+                : it.effectiveRecipe,
             };
           })
         : prev,
@@ -138,6 +163,54 @@ export default function TodayScreen() {
 
   const handleDoneCancel = useCallback(() => setDoneTargetSlotId(null), []);
 
+  const handleReset = useCallback(
+    async (slotId: string) => {
+      try {
+        await deleteEvent(date, slotId);
+        await removeAllActualsForSlot(date, slotId);
+        applyReset(slotId);
+        setDraftActuals((prev) => {
+          const next = { ...prev };
+          delete next[slotId];
+          return next;
+        });
+      } catch (err) {
+        Alert.alert('Fehler beim Zurücksetzen', err instanceof Error ? err.message : String(err));
+      }
+    },
+    [date, applyReset],
+  );
+
+  const handleResetAll = useCallback(() => {
+    const doneItems = items?.filter((it) => it.event?.status === 'done') ?? [];
+    if (doneItems.length === 0) return;
+    Alert.alert(
+      'Alle zurücksetzen?',
+      `${doneItems.length} erledigte Mahlzeit${doneItems.length === 1 ? '' : 'en'} werden zurückgesetzt.`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Zurücksetzen',
+          style: 'destructive',
+          onPress: async () => {
+            for (const it of doneItems) {
+              try {
+                await deleteEvent(date, it.slot.id);
+                await removeAllActualsForSlot(date, it.slot.id);
+                applyReset(it.slot.id);
+              } catch (err) {
+                Alert.alert('Fehler', err instanceof Error ? err.message : String(err));
+              }
+            }
+            setDraftActuals({});
+          },
+        },
+      ],
+    );
+  }, [items, date, applyReset]);
+
+  const doneCount = items?.filter((it) => it.event?.status === 'done').length ?? 0;
+
   if (error) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -166,13 +239,24 @@ export default function TodayScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.header}>Heute</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.header}>Heute</Text>
+          {doneCount > 0 ? (
+            <Pressable
+              onPress={handleResetAll}
+              style={({ pressed }) => [styles.resetAllBtn, pressed && { opacity: 0.5 }]}
+            >
+              <Text style={styles.resetAllText}>Alle zurücksetzen</Text>
+            </Pressable>
+          ) : null}
+        </View>
         {items.map((item) => (
           <TimelineItemCard
             key={item.slot.id}
             item={item}
             draftActuals={draftActuals[item.slot.id] ?? {}}
             onDone={handleDone}
+            onReset={handleReset}
             onActualChange={handleActualChange}
           />
         ))}
@@ -204,11 +288,24 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   header: {
     fontSize: 28,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 16,
+  },
+  resetAllBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  resetAllText: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   empty: {
     fontSize: 16,

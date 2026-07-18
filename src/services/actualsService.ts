@@ -64,6 +64,19 @@ export async function listActuals(date: string, slotId: string): Promise<DayActu
   return rows.map(mapDayActual);
 }
 
+export async function removeAllActualsForSlot(date: string, slotId: string): Promise<void> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ id: string }>(
+    'SELECT id FROM day_actuals WHERE date = ? AND slot_id = ?',
+    [date, slotId],
+  );
+  for (const row of rows) {
+    await enqueueOutbox('day_actuals', row.id, 'delete', { id: row.id });
+  }
+  await db.runAsync('DELETE FROM day_actuals WHERE date = ? AND slot_id = ?', [date, slotId]);
+  getLocalHouseholdContext().then((ctx) => { if (ctx) drainOutbox(ctx).catch(console.warn); });
+}
+
 export async function listActualsByDate(date: string): Promise<DayActual[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<DayActualRow>(

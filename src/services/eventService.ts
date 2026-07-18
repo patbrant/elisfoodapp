@@ -4,6 +4,18 @@ import type { Event, EventStatus } from '../domain/types';
 import { getLocalHouseholdContext } from './authService';
 import { drainOutbox, enqueueOutbox } from './syncService';
 
+export async function deleteEvent(date: string, slotId: string): Promise<void> {
+  const db = await getDb();
+  const existing = await db.getFirstAsync<{ id: string }>(
+    'SELECT id FROM events WHERE date = ? AND slot_id = ?',
+    [date, slotId],
+  );
+  if (!existing) return;
+  await enqueueOutbox('events', existing.id, 'delete', { id: existing.id });
+  await db.runAsync('DELETE FROM events WHERE date = ? AND slot_id = ?', [date, slotId]);
+  getLocalHouseholdContext().then((ctx) => { if (ctx) drainOutbox(ctx).catch(console.warn); });
+}
+
 export class EventAlreadyExistsError extends Error {
   constructor(date: string, slotId: string) {
     super(`Event already exists for slot ${slotId} on ${date}`);

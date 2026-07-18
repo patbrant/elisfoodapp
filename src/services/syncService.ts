@@ -109,6 +109,16 @@ function isRetryable(code: string | undefined): boolean {
 
 // ---- Pull ----
 
+// For these tables Supabase is the single source of truth. Local rows whose IDs
+// are absent from the remote response are stale (deleted or never pushed) and must
+// be removed so they don't surface in the UI.
+const PLAN_TABLES: ReadonlySet<SyncTable> = new Set([
+  'plan_versions',
+  'slots',
+  'components',
+  'meal_recipe_items',
+]);
+
 const LOCAL_UPSERT_SQL: Record<SyncTable, string> = {
   plan_versions:
     'INSERT INTO plan_versions (id, name, valid_from, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, valid_from=excluded.valid_from',
@@ -191,6 +201,29 @@ export async function pullAll(context: HouseholdContext): Promise<void> {
     }
     if (upserted !== data.length) {
       console.warn(`[pullAll] ${table}: only ${upserted}/${data.length} rows upserted`);
+    }
+
+    // Remove local rows that no longer exist in Supabase (plan tables only).
+    // FK CASCADE on slots handles dependent meal_recipe_items/events/actuals automatically.
+    if (PLAN_TABLES.has(table)) {
+      const remoteIds = (data as RemoteRow[])
+        .map((r) => r.id)
+        .filter((id): id is string => typeof id === 'string');
+      if (remoteIds.length > 0) {
+        const placeholders = remoteIds.map(() => '?').join(',');
+        const deleted = await db.runAsync(
+          `DELETE FROM ${table} WHERE id NOT IN (${placeholders})`,
+          remoteIds,
+        );
+        if (deleted.changes > 0) {
+          console.log(`[pullAll] ${table}: removed ${deleted.changes} stale local rows`);
+        }
+      } else {
+        const deleted = await db.runAsync(`DELETE FROM ${table}`);
+        if (deleted.changes > 0) {
+          console.log(`[pullAll] ${table}: remote empty — cleared ${deleted.changes} local rows`);
+        }
+      }
     }
   }
 

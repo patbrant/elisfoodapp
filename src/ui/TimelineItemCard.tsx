@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatPercentage, totalPercentage } from '../domain/actualsMath';
+import { totalPercentage, formatPercentage } from '../domain/actualsMath';
 import { minutesToHHMM } from '../domain/time';
 import type { TodayItem } from '../domain/types';
 import { RecipeCard } from './RecipeCard';
@@ -9,10 +9,11 @@ type Props = {
   item: TodayItem;
   draftActuals: Record<string, string>;
   onDone: (slotId: string) => void;
+  onReset: (slotId: string) => void;
   onActualChange: (slotId: string, itemId: string, componentId: string, text: string) => void;
 };
 
-export function TimelineItemCard({ item, draftActuals, onDone, onActualChange }: Props) {
+export function TimelineItemCard({ item, draftActuals, onDone, onReset, onActualChange }: Props) {
   const { slot, effectiveRecipe, totalMl, event } = item;
   const hasEvent = !!event;
   const hasRecipe = slot.type === 'meal' && effectiveRecipe && effectiveRecipe.length > 0;
@@ -40,20 +41,29 @@ export function TimelineItemCard({ item, draftActuals, onDone, onActualChange }:
           totalMl={totalMl ?? 0}
           editable={!hasEvent}
           draftActuals={draftActuals}
-          onActualChange={(itemId, componentId, text) => onActualChange(slot.id, itemId, componentId, text)}
+          onActualChange={(itemId, componentId, text) =>
+            onActualChange(slot.id, itemId, componentId, text)
+          }
         />
       ) : null}
       {event?.note ? <Text style={styles.note}>„{event.note}"</Text> : null}
-      {!hasEvent ? (
-        <View style={styles.actions}>
+      <View style={styles.actions}>
+        {hasEvent ? (
+          <Pressable
+            style={({ pressed }) => [styles.resetButton, pressed && styles.pressed]}
+            onPress={() => onReset(slot.id)}
+          >
+            <Text style={styles.resetText}>Zurücksetzen</Text>
+          </Pressable>
+        ) : (
           <Pressable
             style={({ pressed }) => [styles.actionButton, styles.doneButton, pressed && styles.pressed]}
             onPress={() => onDone(slot.id)}
           >
             <Text style={styles.doneText}>Erledigt</Text>
           </Pressable>
-        </View>
-      ) : null}
+        )}
+      </View>
     </View>
   );
 }
@@ -75,7 +85,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   cardWithEvent: {
-    opacity: 0.6,
+    opacity: 0.72,
   },
   header: {
     flexDirection: 'row',
@@ -143,6 +153,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  resetButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resetText: {
+    color: colors.textSecondary,
+    fontSize: 13,
   },
   note: {
     marginTop: 6,

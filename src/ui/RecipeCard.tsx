@@ -1,14 +1,12 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
-  componentPercentage,
-  formatPercentage,
   suggestedRemainingMl,
   TUBE_LOSS_ML,
   type TargetActualPair,
 } from '../domain/actualsMath';
 import type { TodayRecipeItem } from '../domain/types';
 import { DeliveryBadge } from './DeliveryBadge';
-import { colors } from './theme';
+import { colors, radius } from './theme';
 
 type Props = {
   items: TodayRecipeItem[];
@@ -21,60 +19,72 @@ type Props = {
 export function RecipeCard({ items, editable, draftActuals, onActualChange }: Props) {
   const pairs: TargetActualPair[] = items.map((it) => ({ ml: it.ml, actualMl: it.actualMl }));
 
+  // Hero: remaining amount for the last component, computed from all others' actuals.
+  const lastItem = items.length > 1 ? items[items.length - 1] : null;
+  const heroSuggestion = lastItem
+    ? suggestedRemainingMl(pairs[pairs.length - 1], pairs.slice(0, -1))
+    : 0;
+  const lastIsEmpty = lastItem
+    ? lastItem.actualMl === null || lastItem.actualMl === 0
+    : false;
+  const showHero = editable && !!lastItem && lastIsEmpty && heroSuggestion > 0;
+
   return (
     <View style={styles.container}>
-      {items.map((r, idx) => {
-        const others = pairs.filter((_, i) => i !== idx);
-        const suggestion = suggestedRemainingMl(pairs[idx], others);
-        const isEmpty = r.actualMl === null || r.actualMl === 0;
-        const showSuggestion = editable && isEmpty && suggestion > 0;
-        const pct = componentPercentage(pairs[idx]);
+      {items.map((r) => {
         const draftValue = draftActuals[r.itemId];
-        const value = draftValue !== undefined
-          ? draftValue
-          : r.actualMl !== null
-            ? String(r.actualMl)
-            : '';
+        const value =
+          draftValue !== undefined
+            ? draftValue
+            : r.actualMl !== null
+              ? String(r.actualMl)
+              : '';
 
         return (
           <View key={`${r.componentId}:${r.sortOrder}`} style={styles.row}>
-            <View style={styles.line1}>
+            <View style={styles.rowMain}>
               <View style={styles.nameWrap}>
                 <Text style={styles.name} numberOfLines={1}>
                   {r.name}
                 </Text>
                 <DeliveryBadge form={r.deliveryForm} />
               </View>
-              <Text style={styles.target}>Maximalmenge {r.ml} ml</Text>
-              <Text style={[styles.percent, pct === 0 && styles.percentZero]}>
-                {formatPercentage(pct)}
-              </Text>
+              <View style={styles.amountWrap}>
+                <TextInput
+                  style={[styles.input, !editable && styles.inputReadonly]}
+                  value={value}
+                  onChangeText={(t) => onActualChange(r.itemId, r.componentId, t)}
+                  keyboardType="number-pad"
+                  placeholder="—"
+                  placeholderTextColor={colors.textMuted}
+                  editable={editable}
+                  maxLength={4}
+                />
+                <Text style={styles.amountTarget}>/ {r.ml} ml</Text>
+              </View>
             </View>
             {r.deliveryForm === 'sondomat' ? (
               <Text style={styles.tubeHint}>
                 Pumpe {r.ml} + {TUBE_LOSS_ML} ml = {r.ml + TUBE_LOSS_ML} ml
               </Text>
             ) : null}
-            <View style={styles.line2}>
-              <Text style={styles.inputLabel}>Verabreicht</Text>
-              <TextInput
-                style={[styles.input, !editable && styles.inputReadonly]}
-                value={value}
-                onChangeText={(t) => onActualChange(r.itemId, r.componentId, t)}
-                keyboardType="number-pad"
-                placeholder="0"
-                placeholderTextColor={colors.textMuted}
-                editable={editable}
-                maxLength={4}
-              />
-              <Text style={styles.inputUnit}>ml</Text>
-              {showSuggestion ? (
-                <Text style={styles.suggestion}>≈ {suggestion} ml</Text>
-              ) : null}
-            </View>
           </View>
         );
       })}
+
+      {showHero ? (
+        <View style={styles.heroBox}>
+          <View>
+            <Text style={styles.heroLabel}>{lastItem!.name} – noch nötig</Text>
+            {lastItem!.deliveryForm === 'sondomat' ? (
+              <Text style={styles.heroTubeHint}>
+                Pumpe {heroSuggestion + TUBE_LOSS_ML} ml total
+              </Text>
+            ) : null}
+          </View>
+          <Text style={styles.heroValue}>{heroSuggestion} ml</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -87,11 +97,11 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderLight,
   },
   row: {
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderLight,
   },
-  line1: {
+  rowMain: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -107,33 +117,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     flexShrink: 1,
   },
-  target: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginRight: 10,
-    fontVariant: ['tabular-nums'],
-  },
-  percent: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
-    minWidth: 42,
-    textAlign: 'right',
-  },
-  percentZero: {
-    color: colors.textMuted,
-    fontWeight: '400',
-  },
-  line2: {
+  amountWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  inputLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    gap: 4,
   },
   input: {
     backgroundColor: colors.surface,
@@ -152,15 +139,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderLight,
     color: colors.textSecondary,
   },
-  inputUnit: {
+  amountTarget: {
     fontSize: 13,
     color: colors.textSecondary,
-  },
-  suggestion: {
-    fontSize: 12,
-    color: colors.suggestion,
-    fontStyle: 'italic',
-    marginLeft: 6,
+    fontVariant: ['tabular-nums'],
   },
   tubeHint: {
     fontSize: 12,
@@ -169,10 +151,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 2,
   },
-  total: {
-    marginTop: 8,
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
+  heroBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.md,
+  },
+  heroLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  heroTubeHint: {
+    fontSize: 11,
+    color: colors.tubeLoss,
+    marginTop: 2,
+  },
+  heroValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.primary,
+    fontVariant: ['tabular-nums'],
   },
 });
