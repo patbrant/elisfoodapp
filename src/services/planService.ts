@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { getDb } from '../db';
 import {
+  type PlanVersionRow,
   type RecipeItemRow,
   type SlotRow,
   getActivePlanVersion,
@@ -189,4 +190,73 @@ export async function removeRecipeItem(itemId: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM meal_recipe_items WHERE id = ?', [itemId]);
   syncPush('meal_recipe_items', itemId, 'delete', { id: itemId });
+}
+
+export type PlanVersionWithCount = PlanVersionRow & { slotCount: number };
+
+export async function listAllPlanVersions(): Promise<PlanVersionWithCount[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<PlanVersionRow & { slot_count: number }>(
+    `SELECT pv.*, COUNT(s.id) AS slot_count
+     FROM plan_versions pv
+     LEFT JOIN slots s ON s.plan_version_id = pv.id
+     GROUP BY pv.id
+     ORDER BY pv.valid_from DESC`,
+  );
+  return rows.map((r) => ({ ...r, slotCount: r.slot_count }));
+}
+
+export async function createNewPlanVersion(name: string, validFrom: string): Promise<PlanVersionRow> {
+  const db = await getDb();
+  const today = toLocalISODate(new Date());
+  const currentPv = await getActivePlanVersion(db, today);
+
+  const newVersionId = Crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const trimmedName = name.trim() || `Plan ab ${validFrom}`;
+
+  await db.runAsync(
+    'INSERT INTO plan_versions (id, name, valid_from, created_at) VALUES (?, ?, ?, ?)',
+    [newVersionId, trimmedName, validFrom, createdAt],
+  );
+  await enqueueOutbox('plan_versions', newVersionId, 'upsert', {
+    id: newVersionId, name: trimmedName, valid_from: validFrom, created_at: createdAt,
+  });
+
+  if (currentPv) {
+    const currentSlots = await db.getAllAsync<SlotRow>(
+      'SELECT * FROM slots WHERE plan_version_id = ? ORDER BY sort_order ASC',
+      [currentPv.id],
+    );
+    for (const slot of currentSlots) {
+      const newSlotId = Crypto.randomUUID();
+      await db.runAsync(
+        'INSERT INTO slots (id, plan_version_id, type, title, info, time_minutes, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [newSlotId, newVersionId, slot.type, slot.title, slot.info, slot.time_minutes, slot.sort_order, createdAt],
+      );
+      await enqueueOutbox('slots', newSlotId, 'upsert', {
+        id: newSlotId, plan_version_id: newVersionId, type: slot.type, title: slot.title,
+        info: slot.info, time_minutes: slot.time_minutes, sort_order: slot.sort_order, created_at: createdAt,
+      });
+
+      const items = await db.getAllAsync<RecipeItemRow>(
+        'SELECT * FROM meal_recipe_items WHERE slot_id = ?',
+        [slot.id],
+      );
+      for (const item of items) {
+        const newItemId = Crypto.randomUUID();
+        await db.runAsync(
+          'INSERT INTO meal_recipe_items (id, slot_id, component_id, ml, sort_order, delivery_form) VALUES (?, ?, ?, ?, ?, ?)',
+          [newItemId, newSlotId, item.component_id, item.ml, item.sort_order, item.delivery_form],
+        );
+        await enqueueOutbox('meal_recipe_items', newItemId, 'upsert', {
+          id: newItemId, slot_id: newSlotId, component_id: item.component_id,
+          ml: item.ml, sort_order: item.sort_order, delivery_form: item.delivery_form,
+        });
+      }
+    }
+  }
+
+  getLocalHouseholdContext().then((ctx) => { if (ctx) drainOutbox(ctx).catch(console.warn); });
+  return { id: newVersionId, name: trimmedName, valid_from: validFrom, created_at: createdAt };
 }
