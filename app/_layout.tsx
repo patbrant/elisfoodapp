@@ -1,5 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import { Tabs } from 'expo-router';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { getDb } from '../src/db';
@@ -135,6 +146,15 @@ export default function RootLayout() {
             title: 'Verlauf',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="time-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="timer"
+          options={{
+            title: 'Timer',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="timer-outline" size={size} color={color} />
             ),
           }}
         />
