@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -18,8 +19,23 @@ import {
   readSyncMeta,
   registerPushToken,
 } from '../src/services/authService';
+import {
+  type NotificationPreferences,
+  loadNotificationPreferences,
+  saveNotificationPreferences,
+} from '../src/services/notificationPreferencesService';
 import { drainOutbox, pullAll } from '../src/services/syncService';
 import { colors, radius } from '../src/ui/theme';
+
+const WEEKDAYS = [
+  { label: 'Mo', value: 1 },
+  { label: 'Di', value: 2 },
+  { label: 'Mi', value: 3 },
+  { label: 'Do', value: 4 },
+  { label: 'Fr', value: 5 },
+  { label: 'Sa', value: 6 },
+  { label: 'So', value: 7 },
+];
 
 export default function SettingsScreen() {
   const { context, isAdmin, refreshContext } = useHousehold();
@@ -29,6 +45,10 @@ export default function SettingsScreen() {
   const [syncing, setSyncing] = useState(false);
   const [draftAdminCode, setDraftAdminCode] = useState('');
   const [claiming, setClaiming] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>({
+    notificationsEnabled: true,
+    enabledWeekdays: [1, 2, 3, 4, 5, 6, 7],
+  });
 
   const loadMeta = useCallback(async () => {
     if (!context) return;
@@ -48,11 +68,34 @@ export default function SettingsScreen() {
       const code = await getAdminCode(context.householdId);
       setAdminCode(code);
     }
+
+    const prefs = await loadNotificationPreferences(context);
+    setNotifPrefs(prefs);
   }, [context, isAdmin]);
 
   useEffect(() => {
     loadMeta();
   }, [loadMeta]);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    if (!context) return;
+    const updated = { ...notifPrefs, notificationsEnabled: value };
+    setNotifPrefs(updated);
+    await saveNotificationPreferences(context, updated);
+  };
+
+  const handleToggleWeekday = async (day: number) => {
+    if (!context) return;
+    const current = notifPrefs.enabledWeekdays;
+    const isActive = current.includes(day);
+    if (isActive && current.length === 1) return; // mindestens 1 Tag muss aktiv bleiben
+    const updated = {
+      ...notifPrefs,
+      enabledWeekdays: isActive ? current.filter((d) => d !== day) : [...current, day],
+    };
+    setNotifPrefs(updated);
+    await saveNotificationPreferences(context, updated);
+  };
 
   const handleCopyJoinCode = () => {
     if (!joinCode) return;
@@ -230,6 +273,40 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Benachrichtigungen</Text>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Benachrichtigungen aktivieren</Text>
+            <Switch
+              value={notifPrefs.notificationsEnabled}
+              onValueChange={handleToggleNotifications}
+              trackColor={{ false: colors.borderLight, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+          {notifPrefs.notificationsEnabled ? (
+            <View style={styles.weekdaySection}>
+              <Text style={styles.weekdayLabel}>Aktive Wochentage</Text>
+              <View style={styles.weekdayRow}>
+                {WEEKDAYS.map((day) => {
+                  const active = notifPrefs.enabledWeekdays.includes(day.value);
+                  return (
+                    <Pressable
+                      key={day.value}
+                      style={[styles.dayChip, active && styles.dayChipActive]}
+                      onPress={() => handleToggleWeekday(day.value)}
+                    >
+                      <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                        {day.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.card}>
           <Pressable
             style={({ pressed }) => [styles.btn, styles.btnDanger, pressed && styles.btnPressed]}
             onPress={handleLeave}
@@ -313,6 +390,24 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontSize: 14, color: colors.textSecondary },
   rowValue: { fontSize: 14, fontWeight: '600', color: colors.text },
+  weekdaySection: { marginTop: 12 },
+  weekdayLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: 8 },
+  weekdayRow: { flexDirection: 'row', gap: 6 },
+  dayChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dayChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  dayChipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  dayChipTextActive: { color: '#fff' },
   btn: {
     paddingVertical: 13,
     borderRadius: radius.md,

@@ -1,7 +1,7 @@
 // Supabase Edge Function: send-meal-reminders
 // Triggered by pg_cron every minute.
 // Finds meal slots starting in ~15 minutes and sends Expo push notifications
-// to all registered devices in the household.
+// to registered devices that have notifications enabled for today's weekday.
 //
 // Deploy: supabase functions deploy send-meal-reminders
 // Set env in dashboard: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -10,6 +10,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const REMINDER_MINUTES = 15;
 const WINDOW_MINUTES = 1; // fire if slot is between 14–16 minutes away
+
+const WEEKDAY_MAP: Record<string, number> = {
+  Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7,
+};
 
 Deno.serve(async (_req: Request) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -45,8 +49,10 @@ Deno.serve(async (_req: Request) => {
     const localMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
     const targetMinutes = localMinutes + REMINDER_MINUTES;
 
-    // Local date in household timezone
+    // Local date and weekday in household timezone
     const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(now); // YYYY-MM-DD
+    const weekdayShort = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(now);
+    const todayWeekday = WEEKDAY_MAP[weekdayShort] ?? 0;
 
     // Load slots for this household where time_minutes ≈ targetMinutes (±WINDOW_MINUTES)
     const { data: slots } = await supabase
@@ -58,15 +64,6 @@ Deno.serve(async (_req: Request) => {
       .lte('time_minutes', targetMinutes + WINDOW_MINUTES);
 
     if (!slots || slots.length === 0) continue;
-
-    // Check if reminders are enabled for today
-    const { data: daySetting } = await supabase
-      .from('day_settings')
-      .select('reminders_enabled')
-      .eq('date', localDate)
-      .single();
-
-    if (daySetting && daySetting.reminders_enabled === 0) continue;
 
     // Filter out already-done slots
     const slotIds: string[] = slots.map((s: { id: string }) => s.id);
@@ -82,22 +79,37 @@ Deno.serve(async (_req: Request) => {
     const pendingSlots = slots.filter((s: { id: string }) => !doneSlotIds.has(s.id));
     if (pendingSlots.length === 0) continue;
 
-    // Load push tokens for this household
+    // Load push tokens with notification preferences for this household
     const { data: tokens } = await supabase
       .from('push_tokens')
-      .select('expo_token')
+      .select('expo_token, user_id, notification_preferences(notifications_enabled, enabled_weekdays)')
       .eq('household_id', hhId);
 
     if (!tokens || tokens.length === 0) continue;
 
-    const expoTokens: string[] = tokens.map((t: { expo_token: string }) => t.expo_token);
+    // Filter tokens by per-user notification preferences
+    const activeTokens: string[] = (tokens as Array<{
+      expo_token: string;
+      user_id: string;
+      notification_preferences: { notifications_enabled: number; enabled_weekdays: string } | null;
+    }>)
+      .filter((t) => {
+        const prefs = t.notification_preferences;
+        if (!prefs) return true; // no entry = default = all enabled
+        if (prefs.notifications_enabled === 0) return false;
+        const enabledDays = prefs.enabled_weekdays.split(',').map(Number);
+        return enabledDays.includes(todayWeekday);
+      })
+      .map((t) => t.expo_token);
+
+    if (activeTokens.length === 0) continue;
 
     // Build notification messages
     for (const slot of pendingSlots) {
       const hh = Math.floor(slot.time_minutes / 60).toString().padStart(2, '0');
       const mm = (slot.time_minutes % 60).toString().padStart(2, '0');
 
-      const messages = expoTokens.map((token) => ({
+      const messages = activeTokens.map((token) => ({
         to: token,
         title: 'Vorbereitung',
         body: `${hh}:${mm} ${slot.title} — in ${REMINDER_MINUTES} Min.`,

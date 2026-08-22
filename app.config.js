@@ -29,7 +29,20 @@ const config = {
     favicon: './assets/favicon.png',
     bundler: 'metro',
   },
-  plugins: ['expo-router', 'expo-sqlite'],
+  plugins: [
+    'expo-router',
+    'expo-sqlite',
+    [
+      'expo-notifications',
+      {
+        icon: './assets/icon.png',
+        color: '#E6F4FE',
+        androidMode: 'default',
+        androidCollapsedTitle: "Eli's Food App",
+        iosDisplayInForeground: true,
+      },
+    ],
+  ],
   extra: {
     router: {},
     eas: {
